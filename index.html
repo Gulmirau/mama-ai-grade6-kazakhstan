@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mama AI - учебный помощник для 6 класса</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Навигация">
+      <div class="brand">
+        <div class="brand-mark">M</div>
+        <div>
+          <strong>Mama AI</strong>
+          <span>6 класс, Казахстан</span>
+        </div>
+      </div>
+
+      <nav class="nav-list">
+        <a href="#learn" class="active">Учеба</a>
+        <a href="#homework">Домашка</a>
+        <a href="#quiz">Мини-тест</a>
+        <a href="#parents">Родителям</a>
+      </nav>
+
+      <div class="language-box">
+        <span>Язык объяснения</span>
+        <div class="segmented" role="group" aria-label="Выбор языка">
+          <button class="lang-btn active" data-lang="ru">RU</button>
+          <button class="lang-btn" data-lang="kk">KZ</button>
+          <button class="lang-btn" data-lang="en">EN</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <section class="topbar">
+        <div>
+          <p class="eyebrow">AI-компаньон по школьной программе</p>
+          <h1>Mama AI помогает понять тему, а не просто списать ответ</h1>
+        </div>
+        <div class="score-strip" aria-label="Игровой прогресс">
+          <div><strong id="points">120</strong><span>баллов</span></div>
+          <div><strong id="streak">5</strong><span>дней подряд</span></div>
+          <div><strong id="level">3</strong><span>уровень</span></div>
+        </div>
+      </section>
+
+      <section class="subject-grid" id="learn" aria-label="Предметы">
+        <button class="subject-card active" data-subject="math">
+          <span class="subject-icon">∑</span>
+          <strong>Математика</strong>
+          <small>Дроби, пропорции, задачи</small>
+        </button>
+        <button class="subject-card" data-subject="english">
+          <span class="subject-icon">Aa</span>
+          <strong>Английский</strong>
+          <small>Past Simple, слова, перевод</small>
+        </button>
+        <button class="subject-card" data-subject="science">
+          <span class="subject-icon">◎</span>
+          <strong>Естествознание</strong>
+          <small>Клетка, вещества, природа</small>
+        </button>
+        <button class="subject-card" data-subject="kazakh">
+          <span class="subject-icon">Қ</span>
+          <strong>Казахский язык</strong>
+          <small>Слова, предложения, перевод</small>
+        </button>
+        <button class="subject-card" data-subject="kazakhLiterature">
+          <span class="subject-icon">Ә</span>
+          <strong>Казахская литература</strong>
+          <small>Автор, идея, образ героя</small>
+        </button>
+        <button class="subject-card" data-subject="russian">
+          <span class="subject-icon">Р</span>
+          <strong>Русский язык</strong>
+          <small>Части речи, текст, орфография</small>
+        </button>
+        <button class="subject-card" data-subject="russianLiterature">
+          <span class="subject-icon">К</span>
+          <strong>Русская литература</strong>
+          <small>Сюжет, тема, анализ</small>
+        </button>
+        <button class="subject-card" data-subject="kazakhstanHistory">
+          <span class="subject-icon">Т</span>
+          <strong>История Казахстана</strong>
+          <small>Средние века, тюрки, ханства</small>
+        </button>
+        <button class="subject-card" data-subject="worldHistory">
+          <span class="subject-icon">W</span>
+          <strong>Всемирная история</strong>
+          <small>Средневековый мир</small>
+        </button>
+        <button class="subject-card" data-subject="geography">
+          <span class="subject-icon">G</span>
+          <strong>География</strong>
+          <small>Карта, климат, материки</small>
+        </button>
+        <button class="subject-card" data-subject="informatics">
+          <span class="subject-icon">{}</span>
+          <strong>Информатика</strong>
+          <small>Алгоритмы, данные, безопасность</small>
+        </button>
+        <button class="subject-card" data-subject="art">
+          <span class="subject-icon">A</span>
+          <strong>Художественный труд</strong>
+          <small>Материалы, композиция, проект</small>
+        </button>
+        <button class="subject-card" data-subject="sor">
+          <span class="subject-icon">✓</span>
+          <strong>Подготовка к СОР</strong>
+          <small>Повторение и тренировка</small>
+        </button>
+        <button class="subject-card" data-subject="soch">
+          <span class="subject-icon">★</span>
+          <strong>Подготовка к СОЧ</strong>
+          <small>План, темы, пробный тест</small>
+        </button>
+      </section>
+
+      <section class="learning-layout">
+        <div class="assistant-panel" id="homework">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Пошаговое объяснение</p>
+              <h2 id="chatTitle">Математика</h2>
+            </div>
+            <button class="ghost-btn" id="hintBtn">Подсказка</button>
+          </div>
+
+          <div class="chat" id="chat" aria-live="polite">
+            <div class="message bot">
+              Привет! Я объясню тему маленькими шагами. Выбери предмет или напиши задание, а я помогу разобраться без готового списывания.
+            </div>
+          </div>
+
+          <form class="input-row" id="chatForm">
+            <input id="userInput" type="text" autocomplete="off" placeholder="Например: объясни пропорции простыми словами" />
+            <button type="submit">Отправить</button>
+          </form>
+        </div>
+
+        <div class="side-stack">
+          <section class="photo-tool">
+            <div class="panel-heading compact">
+              <div>
+                <p class="eyebrow">Фото задания</p>
+                <h2>Разбор страницы</h2>
+              </div>
+            </div>
+            <label class="upload-zone" for="photoInput">
+              <input id="photoInput" type="file" accept="image/*" />
+              <span class="upload-icon">+</span>
+              <strong>Добавить фото</strong>
+              <small>Прототип распознавания учебника или тетради</small>
+            </label>
+            <p class="photo-status" id="photoStatus">После загрузки Mama AI предложит разобрать условие по шагам.</p>
+          </section>
+
+          <section class="daily-plan">
+            <div class="panel-heading compact">
+              <div>
+                <p class="eyebrow">План на сегодня</p>
+                <h2>25 минут</h2>
+              </div>
+            </div>
+            <ul class="task-list">
+              <li><input type="checkbox" checked /> Повторить пропорции</li>
+              <li><input type="checkbox" /> Сделать 5 задач без спешки</li>
+              <li><input type="checkbox" /> Пройти мини-тест</li>
+            </ul>
+          </section>
+        </div>
+      </section>
+
+      <section class="bottom-grid">
+        <div class="quiz-panel" id="quiz">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Мини-тест после урока</p>
+              <h2>Проверь понимание</h2>
+            </div>
+            <span class="pill" id="quizReward">+10 баллов</span>
+          </div>
+          <p class="question" id="quizQuestion">Что такое пропорция?</p>
+          <div class="answer-grid" id="answerGrid">
+            <button data-correct="false">Любое сложение двух чисел</button>
+            <button data-correct="true">Равенство двух отношений</button>
+            <button data-correct="false">Только деление на 10</button>
+          </div>
+          <p class="result" id="quizResult"></p>
+        </div>
+
+        <div class="parent-panel" id="parents">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Панель родителя</p>
+              <h2>Прогресс ребенка</h2>
+            </div>
+          </div>
+          <div class="progress-row">
+            <span>Математика</span>
+            <div class="bar"><i style="width: 76%"></i></div>
+            <strong>76%</strong>
+          </div>
+          <div class="progress-row">
+            <span>Английский</span>
+            <div class="bar"><i style="width: 62%"></i></div>
+            <strong>62%</strong>
+          </div>
+          <div class="progress-row">
+            <span>Естествознание</span>
+            <div class="bar"><i style="width: 54%"></i></div>
+            <strong>54%</strong>
+          </div>
+          <p class="parent-note">Сегодня ребенок чаще ошибался в пропорциях. Рекомендуем короткое повторение и 3 похожие задачи.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
