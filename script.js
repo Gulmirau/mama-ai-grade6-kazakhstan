@@ -342,13 +342,139 @@ async function syncServerState() {
 async function apiFetch(path, options = {}, requireAuth = true) {
   const headers = { "Content-Type": "application/json" };
   if (requireAuth && apiToken) headers.Authorization = `Bearer ${apiToken}`;
-  const response = await fetch(path, {
-    method: options.method || "GET",
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined
-  });
-  if (!response.ok) throw new Error(`API ${response.status}`);
-  return response.json();
+  try {
+    const response = await fetch(path, {
+      method: options.method || "GET",
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined
+    });
+    if (!response.ok) throw new Error(`API ${response.status}`);
+    return response.json();
+  } catch (error) {
+    const fallback = makePublicApiFallback(path, options.body || {});
+    if (fallback) return fallback;
+    throw error;
+  }
+}
+
+function makePublicApiFallback(path, body = {}) {
+  if (path === "/api/session") {
+    return {
+      token: "public-demo-token",
+      role: body.role || "student",
+      student: {
+        id: "public-demo-student",
+        name: body.name || studentName.value.trim() || "Ученик",
+        grade: currentGrade,
+        points,
+        streak,
+        grades: []
+      }
+    };
+  }
+
+  if (path === "/api/state") {
+    return {
+      student: {
+        id: "public-demo-student",
+        name: studentName.value.trim() || "Ученик",
+        grade: currentGrade,
+        points,
+        streak,
+        grades: []
+      },
+      students: [],
+      analytics,
+      events: [],
+      aiConfigured: false
+    };
+  }
+
+  if (path.startsWith("/api/kb/status")) {
+    return {
+      status: "ready_for_import",
+      officialDataPolicy: "No fictional official curriculum records. Missing materials are marked awaiting_import.",
+      counts: {
+        subjects: 0,
+        curriculum: 0,
+        lessons: 0,
+        topics: 0,
+        textbooks: 0,
+        workbooks: 0,
+        teacherMaterials: 0,
+        sor: 0,
+        soch: 0,
+        unt: 0,
+        questionBank: 0,
+        files: 0,
+        imports: 0
+      },
+      supportedLanguages: ["ru", "kk", "en"],
+      supportedImportTypes: ["pdf", "docx", "xlsx", "csv", "pptx", "json", "image"]
+    };
+  }
+
+  if (path.startsWith("/api/kb/search")) {
+    return {
+      query: {},
+      priority: ["official_curriculum", "textbooks", "sor_soch", "teacher_materials", "ai_explanation"],
+      results: [],
+      awaitingImport: [
+        { entityType: "curriculum", scope: "Kazakhstan official curriculum grades 1-11", status: "awaiting_import" },
+        { entityType: "textbooks", scope: "Official or licensed textbooks and workbooks", status: "awaiting_import" },
+        { entityType: "assessment", scope: "SOR, SOCH, ENT question banks and criteria", status: "awaiting_import" }
+      ],
+      canUseAiFallback: true
+    };
+  }
+
+  if (path === "/api/ask") {
+    return {
+      answer: makeAnswer(body.question || body.text || ""),
+      aiUsed: false,
+      student: {
+        id: "public-demo-student",
+        name: body.studentName || studentName.value.trim() || "Ученик",
+        grade: currentGrade,
+        points,
+        streak,
+        grades: []
+      }
+    };
+  }
+
+  if (path === "/api/photo") {
+    return {
+      answer: "Фото принято. В публичной версии без облачного backend фото не сохраняется постоянно. Для настоящего OCR нужно подключить серверное хранилище и OpenAI API.",
+      aiUsed: false
+    };
+  }
+
+  if (path === "/api/kb/photo-import") {
+    return {
+      ok: true,
+      status: "uploaded_awaiting_ocr",
+      message: "Public demo accepted the photo metadata. Persistent OCR import requires cloud storage.",
+      extracted: null
+    };
+  }
+
+  if (path === "/api/quiz" || path === "/api/feedback" || path === "/api/grades/import") {
+    return {
+      student: {
+        id: "public-demo-student",
+        name: studentName.value.trim() || "Ученик",
+        grade: currentGrade,
+        points,
+        streak,
+        grades: []
+      },
+      analytics,
+      events: []
+    };
+  }
+
+  return null;
 }
 
 function updateProfileNote() {

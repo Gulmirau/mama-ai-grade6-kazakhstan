@@ -1,0 +1,49 @@
+name: Deploy Mama AI public site
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Prepare static site
+        run: |
+          mkdir -p public_site
+          cp index.html style.css script.js i18n.js public_site/
+          cat > public_site/README_PUBLIC.txt <<'TXT'
+          Mama AI public interface.
+
+          This static public version opens for visitors through GitHub Pages.
+          Persistent OCR, OpenAI API calls, file storage, and server analytics require a cloud backend.
+          TXT
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public_site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
