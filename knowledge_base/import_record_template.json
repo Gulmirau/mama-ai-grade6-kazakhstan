@@ -1,0 +1,86 @@
+{
+  "note": "Template only. Do not treat these sample records as official Kazakhstan educational content.",
+  "officialDataPolicy": "Import verified materials only. If a record is not verified, keep status as awaiting_import or imported_needs_review.",
+  "fileType": "json",
+  "originalName": "replace-with-official-source-name.json",
+  "sourceType": "official_curriculum",
+  "sourceUrl": "awaiting_official_source_url",
+  "license": "awaiting_review",
+  "academicYear": "2026-2027",
+  "language": "ru",
+  "records": [
+    {
+      "entityType": "subject",
+      "code": "replace_subject_code",
+      "title": "Awaiting official subject title",
+      "language": "ru",
+      "gradeRange": [1],
+      "status": "awaiting_import"
+    },
+    {
+      "entityType": "textbook",
+      "title": "Awaiting official textbook title",
+      "publisher": "awaiting_import",
+      "grade": 1,
+      "language": "ru",
+      "subject": "replace_subject_code",
+      "edition": "awaiting_import",
+      "chapters": [],
+      "pages": [],
+      "downloadableResource": null,
+      "status": "awaiting_import"
+    },
+    {
+      "entityType": "lesson",
+      "grade": 1,
+      "subject": "replace_subject_code",
+      "quarter": 1,
+      "section": "Awaiting official section title",
+      "topic": "Awaiting official topic title",
+      "title": "Awaiting official lesson title",
+      "learningObjectives": [],
+      "competencies": [],
+      "status": "awaiting_import"
+    },
+    {
+      "entityType": "sor",
+      "grade": 2,
+      "subject": "replace_subject_code",
+      "quarter": 1,
+      "section": "Awaiting official section title",
+      "topic": "Awaiting official topic title",
+      "learningObjective": "awaiting_import",
+      "task": "awaiting_import",
+      "answer": "awaiting_import",
+      "explanation": "awaiting_import",
+      "assessmentCriteria": "awaiting_import",
+      "difficultyLevel": "awaiting_import",
+      "status": "awaiting_import"
+    },
+    {
+      "entityType": "soch",
+      "grade": 2,
+      "subject": "replace_subject_code",
+      "quarter": 1,
+      "topicsCovered": [],
+      "questionBank": [],
+      "correctAnswers": [],
+      "explanations": [],
+      "assessmentCriteria": "awaiting_import",
+      "scoringSystem": "awaiting_import",
+      "status": "awaiting_import"
+    },
+    {
+      "entityType": "unt",
+      "subject": "replace_subject_code",
+      "topic": "Awaiting official topic title",
+      "difficulty": "awaiting_import",
+      "answers": [],
+      "correctAnswer": "awaiting_import",
+      "explanation": "awaiting_import",
+      "statistics": {},
+      "tags": [],
+      "status": "awaiting_import"
+    }
+  ]
+}
