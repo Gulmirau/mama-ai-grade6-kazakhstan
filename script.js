@@ -189,6 +189,44 @@ const quizBank = {
   }
 };
 
+const trainerBank = [
+  {
+    mode: "gia",
+    subject: "math",
+    topic: "логика решения",
+    question: "Демо ГИА: с чего лучше начинать задачу, если условие кажется сложным?",
+    answers: [
+      ["Сразу писать ответ", false],
+      ["Выделить, что дано и что нужно найти", true],
+      ["Пропустить задачу навсегда", false]
+    ]
+  },
+  {
+    mode: "ent",
+    subject: "ent",
+    topic: "стратегия ЕНТ",
+    question: "Демо ЕНТ: что полезнее всего после пробного теста?",
+    answers: [
+      ["Разобрать ошибки по темам", true],
+      ["Не смотреть результаты", false],
+      ["Учить всё подряд без плана", false]
+    ]
+  },
+  {
+    mode: "weak",
+    subject: "school",
+    topic: "слабые темы",
+    question: "Если тема часто вызывает ошибки, что поможет лучше?",
+    answers: [
+      ["Короткая ежедневная практика", true],
+      ["Ругать себя за ошибку", false],
+      ["Сразу переходить к новой теме", false]
+    ]
+  }
+];
+
+let currentTrainerQuestion = trainerBank[0];
+
 const dailyThemes = [
   { name: "birds", particles: "birds", sound: "birds", colors: ["#7cc8ff", "#ffd166"] },
   { name: "flowers", particles: "flowers", sound: null, colors: ["#ff8ab3", "#63d8b5"] },
@@ -265,6 +303,18 @@ const kbStatusPill = document.getElementById("kbStatusPill");
 const kbResults = document.getElementById("kbResults");
 const kbKeyword = document.getElementById("kbKeyword");
 const kbQuarter = document.getElementById("kbQuarter");
+const cloudStatusPill = document.getElementById("cloudStatusPill");
+const studentCabinetText = document.getElementById("studentCabinetText");
+const parentCabinetText = document.getElementById("parentCabinetText");
+const cloudBackendText = document.getElementById("cloudBackendText");
+const weeklyPlanList = document.getElementById("weeklyPlanList");
+const trainerModeSelect = document.getElementById("trainerModeSelect");
+const trainerQuestion = document.getElementById("trainerQuestion");
+const trainerAnswers = document.getElementById("trainerAnswers");
+const trainerResult = document.getElementById("trainerResult");
+const weakTopicsList = document.getElementById("weakTopicsList");
+const recommendationList = document.getElementById("recommendationList");
+const currentTopicInsight = document.getElementById("currentTopicInsight");
 
 init();
 
@@ -459,6 +509,46 @@ function makePublicApiFallback(path, body = {}) {
     };
   }
 
+  if (path === "/api/cloud/status") {
+    return {
+      provider: "public-static",
+      ready: false,
+      mode: "static_demo",
+      message: "Публичная статическая версия активна. Для общей базы нужен облачный backend.",
+      requiredForProduction: ["authentication", "shared_database", "file_storage", "OCR_queue", "analytics"]
+    };
+  }
+
+  if (path === "/api/parent/summary") {
+    return makeLocalParentSummary();
+  }
+
+  if (path === "/api/learning-plan" || path === "/api/learning-plan/generate") {
+    const plan = makeLocalPlan();
+    return { plan, parentSummary: makeLocalParentSummary(), ...plan };
+  }
+
+  if (path === "/api/trainer/attempt") {
+    return {
+      attempt: {
+        id: `local-${Date.now()}`,
+        mode: body.mode || "gia",
+        topic: body.topic || "diagnostic",
+        correct: Boolean(body.correct),
+        sourceStatus: "demo_not_official"
+      },
+      parentSummary: makeLocalParentSummary(),
+      student: {
+        id: "public-demo-student",
+        name: studentName.value.trim() || "Ученик",
+        grade: currentGrade,
+        points,
+        streak,
+        grades: []
+      }
+    };
+  }
+
   if (path === "/api/quiz" || path === "/api/feedback" || path === "/api/grades/import") {
     return {
       student: {
@@ -616,6 +706,13 @@ function bindEvents() {
   });
 
   document.getElementById("gradeImportForm").addEventListener("submit", importGrades);
+  document.getElementById("generatePlanBtn").addEventListener("click", generateSmartPlan);
+  document.getElementById("nextTrainerBtn").addEventListener("click", renderTrainerQuestion);
+  trainerModeSelect.addEventListener("change", renderTrainerQuestion);
+  trainerAnswers.addEventListener("click", (event) => {
+    const button = event.target.closest("button");
+    if (button) checkTrainerAnswer(button);
+  });
 }
 
 function renderAll() {
@@ -629,6 +726,8 @@ function renderAll() {
   renderKnowledgeBaseStatus();
   renderPlan();
   renderProgress();
+  renderAccountAndParent();
+  renderTrainerQuestion();
   renderQuiz();
   renderScore();
   renderAnalytics();
@@ -847,6 +946,159 @@ function getProgressValue(key, index, title = "") {
   }
   const seed = currentGrade * 9 + key.length * 7 + index * 11 + points;
   return 48 + (seed % 43);
+}
+
+async function renderAccountAndParent() {
+  const subject = currentSubject();
+  if (studentCabinetText) {
+    studentCabinetText.textContent = `${studentName.value || "Ученик"}: ${currentGrade} класс, ${subjectLabel(subject.title)}, ${points} баллов.`;
+  }
+  if (parentCabinetText) {
+    parentCabinetText.textContent = "Родительский кабинет показывает текущую тему, слабые места, рекомендации и план занятий.";
+  }
+  if (currentTopicInsight) {
+    currentTopicInsight.textContent = `${subjectLabel(subject.title)}: ${subject.topics[0]}`;
+  }
+
+  try {
+    const cloud = await apiFetch("/api/cloud/status", {}, false);
+    cloudStatusPill.textContent = cloud.mode || cloud.provider || "local";
+    cloudBackendText.textContent = cloud.message || "Локальный режим активен.";
+  } catch {
+    cloudStatusPill.textContent = "local";
+    cloudBackendText.textContent = "Публичный/локальный режим. Для общей базы нужен облачный backend.";
+  }
+
+  try {
+    const summary = await apiFetch("/api/parent/summary", {}, false);
+    renderParentSummary(summary);
+    renderWeeklyPlan(summary.plan);
+  } catch {
+    renderParentSummary(makeLocalParentSummary());
+    renderWeeklyPlan(makeLocalPlan());
+  }
+}
+
+function makeLocalParentSummary() {
+  const subject = currentSubject();
+  return {
+    currentTopic: subject.topics[0],
+    weakTopics: [{ topic: subjectLabel(subject.title), wrong: 1, total: 3 }],
+    recommendations: [
+      "Составить короткий план на неделю",
+      "Повторять тему по 15-25 минут",
+      "После ошибки просить ребёнка объяснить ход решения"
+    ],
+    plan: makeLocalPlan()
+  };
+}
+
+function renderParentSummary(summary) {
+  if (currentTopicInsight) currentTopicInsight.textContent = summary.currentTopic || currentSubject().topics[0];
+  if (weakTopicsList) {
+    const weak = summary.weakTopics?.length ? summary.weakTopics : [{ topic: "Пока нет данных об ошибках", wrong: 0, total: 0 }];
+    weakTopicsList.innerHTML = weak.map((item) => `<li>${item.topic}${item.total ? `: ошибок ${item.wrong}/${item.total}` : ""}</li>`).join("");
+  }
+  if (recommendationList) {
+    const recs = summary.recommendations?.length ? summary.recommendations : ["Продолжать мягкую ежедневную практику"];
+    recommendationList.innerHTML = recs.map((item) => `<li>${item}</li>`).join("");
+  }
+}
+
+function makeLocalPlan() {
+  const subject = currentSubject();
+  const days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница"];
+  return {
+    focusTopic: subject.topics[0],
+    tasks: days.map((day, index) => ({
+      day,
+      title: index === 0 ? `Диагностика: ${subject.topics[0]}` : index === 4 ? "Мини-проверка и похвала" : `${subjectLabel(subject.title)}: практика`,
+      minutes: index === 4 ? 15 : 25,
+      status: "planned"
+    }))
+  };
+}
+
+function renderWeeklyPlan(plan = null) {
+  if (!weeklyPlanList) return;
+  const activePlan = plan || makeLocalPlan();
+  weeklyPlanList.innerHTML = activePlan.tasks.map((task) => {
+    return `<li><input type="checkbox" /> <span><strong>${task.day}:</strong> ${task.title} · ${task.minutes} мин</span></li>`;
+  }).join("");
+}
+
+async function generateSmartPlan() {
+  const subject = currentSubject();
+  weeklyPlanList.innerHTML = "<li>Составляю план...</li>";
+  try {
+    const response = await apiFetch("/api/learning-plan/generate", {
+      method: "POST",
+      body: {
+        studentName: studentName.value.trim() || "Ученик",
+        grade: currentGrade,
+        subject: subject.key,
+        subjectTitle: subject.title,
+        topic: subject.topics[0],
+        language: currentLang
+      }
+    });
+    renderWeeklyPlan(response.plan);
+    renderParentSummary(response.parentSummary);
+    addMessage("bot success", `План готов: фокус на теме "${response.plan.focusTopic}".`);
+  } catch {
+    const plan = makeLocalPlan();
+    renderWeeklyPlan(plan);
+    addMessage("bot success", `План готов локально: фокус на теме "${plan.focusTopic}".`);
+  }
+}
+
+function renderTrainerQuestion() {
+  if (!trainerQuestion || !trainerAnswers) return;
+  const mode = trainerModeSelect.value;
+  const pool = trainerBank.filter((item) => item.mode === mode || mode === "weak");
+  currentTrainerQuestion = pool[(Date.now() + points + currentGrade) % pool.length] || trainerBank[0];
+  trainerQuestion.textContent = `${currentTrainerQuestion.question} (демо, не официальный банк заданий)`;
+  trainerResult.textContent = "";
+  trainerAnswers.innerHTML = currentTrainerQuestion.answers.map(([text, correct]) => `<button data-correct="${correct}">${text}</button>`).join("");
+}
+
+async function checkTrainerAnswer(button) {
+  const correct = button.dataset.correct === "true";
+  const selected = button.textContent;
+  Array.from(trainerAnswers.querySelectorAll("button")).forEach((item) => {
+    item.disabled = true;
+    item.classList.toggle("correct", item.dataset.correct === "true");
+    if (item === button && !correct) item.classList.add("wrong");
+  });
+  trainerResult.textContent = correct
+    ? "Верно. Отлично: ты не просто ответил(а), а тренируешь стратегию."
+    : "Пока нет. Ничего страшного: ошибка показывает, какую тему повторить.";
+  awardPoints(correct ? 8 : 2, correct ? "тренажёр" : "попытку");
+
+  try {
+    const subject = currentSubject();
+    const response = await apiFetch("/api/trainer/attempt", {
+      method: "POST",
+      body: {
+        studentName: studentName.value.trim() || "Ученик",
+        grade: currentGrade,
+        mode: trainerModeSelect.value,
+        subject: subject.key,
+        subjectTitle: subject.title,
+        topic: currentTrainerQuestion.topic,
+        question: currentTrainerQuestion.question,
+        selected,
+        correct,
+        sourceStatus: "demo_not_official"
+      }
+    });
+    if (response.student) serverStudent = response.student;
+    renderParentSummary(response.parentSummary);
+  } catch {
+    renderParentSummary(makeLocalParentSummary());
+  }
+  renderScore();
+  renderAnalytics();
 }
 
 function renderQuiz() {

@@ -25,6 +25,18 @@ AI source priority: official curriculum, textbooks, SOR/SOCH, teacher materials,
 
 Next official-data steps: collect verified Kazakhstan educational materials, record source metadata, import them through `/api/kb/import`, review records before marking them trusted, then move runtime data to PostgreSQL/Supabase using `knowledge_base/schema.sql`.
 
+## Product modules added after MVP
+
+- Student cabinet and parent cabinet.
+- Parent summary with current topic, weak topics, and recommendations.
+- Weekly learning plan generator.
+- GIA / ENT trainer shell with demo diagnostic questions.
+- Trainer attempt tracking.
+- Cloud backend status endpoint: `GET /api/cloud/status`.
+- Cloud-ready env configuration in `.env.example`.
+
+The trainer does not include official GIA / ENT materials yet. It uses demo questions until verified materials are imported into the Knowledge Base.
+
 # Mama AI
 
 Фронтенд + backend-прототип учебной платформы Mama AI — школьного помощника для 1–11 классов по программе Казахстана.

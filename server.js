@@ -94,6 +94,57 @@ async function routeApi(req, res, url) {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/api/cloud/status") {
+    sendJson(res, 200, makeCloudStatus());
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/account/upsert") {
+    const body = await readJson(req);
+    const db = readDb();
+    const student = getOrCreateStudent(db, getSession(req), body);
+    const account = upsertAccount(db, student, body);
+    writeDb(db);
+    sendJson(res, 200, { account, student, parentSummary: makeParentSummary(db, student) });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/parent/summary") {
+    const db = readDb();
+    const session = getSession(req);
+    const student = session ? db.students.find((item) => item.id === session.studentId) : db.students[0];
+    sendJson(res, 200, makeParentSummary(db, student));
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/learning-plan") {
+    const db = readDb();
+    const session = getSession(req);
+    const student = session ? db.students.find((item) => item.id === session.studentId) : db.students[0];
+    sendJson(res, 200, getOrCreateLearningPlan(db, student, { grade: student?.grade || 6 }));
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/learning-plan/generate") {
+    const body = await readJson(req);
+    const db = readDb();
+    const student = getOrCreateStudent(db, getSession(req), body);
+    const plan = generateLearningPlan(db, student, body);
+    writeDb(db);
+    sendJson(res, 200, { plan, parentSummary: makeParentSummary(db, student) });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/trainer/attempt") {
+    const body = await readJson(req);
+    const db = readDb();
+    const student = getOrCreateStudent(db, getSession(req), body);
+    const attempt = saveTrainerAttempt(db, student, body);
+    writeDb(db);
+    sendJson(res, 200, { attempt, parentSummary: makeParentSummary(db, student), student });
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/kb/status") {
     const kb = readKnowledgeBase();
     sendJson(res, 200, {
@@ -339,6 +390,11 @@ function ensureDb() {
   const student = createStudent("Аружан", 6);
   const db = {
     students: [student],
+    accounts: [],
+    parentLinks: [],
+    learningPlans: [],
+    trainerAttempts: [],
+    cloudSync: [],
     questions: [],
     quizAttempts: [],
     feedback: [],
@@ -677,6 +733,153 @@ function generateLessonPackage(kb, body) {
   return { status: lessonPackage.status, generated: lessonPackage };
 }
 
+function makeCloudStatus() {
+  const provider = cleanText(process.env.CLOUD_BACKEND_PROVIDER || "local-json");
+  const supabaseReady = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const firebaseReady = Boolean(process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY);
+  const ready = provider === "supabase" ? supabaseReady : provider === "firebase" ? firebaseReady : false;
+  return {
+    provider,
+    ready,
+    mode: ready ? "cloud_ready" : "local_json_active",
+    message: ready
+      ? "Cloud backend variables are configured. Adapter can be connected for production persistence."
+      : "Local JSON backend is active. Add cloud provider credentials for shared production data.",
+    requiredForProduction: ["authentication", "shared_database", "file_storage", "OCR_queue", "analytics"]
+  };
+}
+
+function upsertAccount(db, student, body) {
+  const role = cleanText(body.role || "student");
+  const parentName = cleanText(body.parentName || "Родитель");
+  let account = db.accounts.find((item) => item.studentId === student.id && item.role === role);
+  if (!account) {
+    account = {
+      id: crypto.randomUUID(),
+      studentId: student.id,
+      role,
+      createdAt: new Date().toISOString()
+    };
+    db.accounts.push(account);
+  }
+  account.name = role === "parent" ? parentName : student.name;
+  account.grade = student.grade;
+  account.learningLanguage = cleanText(body.language || "ru");
+  account.updatedAt = new Date().toISOString();
+
+  if (role === "parent" && !db.parentLinks.some((item) => item.studentId === student.id && item.accountId === account.id)) {
+    db.parentLinks.push({ id: crypto.randomUUID(), studentId: student.id, accountId: account.id, relation: "parent", createdAt: new Date().toISOString() });
+  }
+
+  addEvent(db, "Кабинет", `${account.name}: ${role}, ${student.grade} класс`);
+  return account;
+}
+
+function getOrCreateLearningPlan(db, student, body = {}) {
+  const existing = db.learningPlans.find((item) => item.studentId === student?.id && item.status === "active");
+  if (existing) return existing;
+  return generateLearningPlan(db, student, body);
+}
+
+function generateLearningPlan(db, student, body = {}) {
+  const subject = cleanText(body.subjectTitle || body.subject || "Математика");
+  const topic = cleanText(body.topic || "повторение темы");
+  const weak = makeWeakTopics(db, student);
+  const focus = weak[0]?.topic || topic;
+  const days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница"];
+  const tasks = days.map((day, index) => ({
+    id: crypto.randomUUID(),
+    day,
+    title: index === 0 ? `Диагностика: ${focus}` : index === 4 ? "Мини-проверка и похвала" : `${subject}: практика по теме`,
+    minutes: index === 4 ? 15 : 25,
+    steps: [
+      "Коротко повторить правило",
+      "Решить 3-5 заданий",
+      "Отметить, что было сложно"
+    ],
+    status: "planned"
+  }));
+
+  const plan = {
+    id: crypto.randomUUID(),
+    studentId: student.id,
+    grade: student.grade,
+    subject,
+    focusTopic: focus,
+    status: "active",
+    tasks,
+    createdAt: new Date().toISOString()
+  };
+  db.learningPlans = db.learningPlans.filter((item) => item.studentId !== student.id || item.status !== "active");
+  db.learningPlans.push(plan);
+  addEvent(db, "План занятий", `${student.name}: ${subject}, фокус: ${focus}`);
+  return plan;
+}
+
+function saveTrainerAttempt(db, student, body) {
+  const attempt = {
+    id: crypto.randomUUID(),
+    studentId: student.id,
+    grade: student.grade,
+    mode: cleanText(body.mode || "gia"),
+    subject: cleanText(body.subject || body.subjectTitle || "unknown"),
+    topic: cleanText(body.topic || "diagnostic"),
+    question: cleanText(body.question || ""),
+    selected: cleanText(body.selected || ""),
+    correct: Boolean(body.correct),
+    sourceStatus: cleanText(body.sourceStatus || "demo_not_official"),
+    createdAt: new Date().toISOString()
+  };
+  db.trainerAttempts.unshift(attempt);
+  db.trainerAttempts = db.trainerAttempts.slice(0, 500);
+  addPoints(student, attempt.correct ? 8 : 2, attempt.correct ? "тренажёр" : "попытку в тренажёре");
+  addEvent(db, attempt.correct ? "Тренажёр: верно" : "Тренажёр: ошибка", `${student.name}: ${attempt.topic}`);
+  return attempt;
+}
+
+function makeWeakTopics(db, student) {
+  if (!student) return [];
+  const attempts = [
+    ...db.quizAttempts.filter((item) => item.studentId === student.id).map((item) => ({ topic: item.subject || "мини-тест", correct: item.correct })),
+    ...db.trainerAttempts.filter((item) => item.studentId === student.id).map((item) => ({ topic: item.topic || item.subject || "тренажёр", correct: item.correct }))
+  ];
+  const byTopic = new Map();
+  for (const attempt of attempts) {
+    const topic = attempt.topic || "общая тема";
+    const stat = byTopic.get(topic) || { topic, total: 0, wrong: 0 };
+    stat.total += 1;
+    if (!attempt.correct) stat.wrong += 1;
+    byTopic.set(topic, stat);
+  }
+  return Array.from(byTopic.values())
+    .filter((item) => item.wrong > 0)
+    .sort((a, b) => (b.wrong / b.total) - (a.wrong / a.total))
+    .slice(0, 5);
+}
+
+function makeParentSummary(db, student) {
+  if (!student) {
+    return { weakTopics: [], recommendations: [], currentTopic: "Нет активного ученика" };
+  }
+  const lastQuestion = db.questions.find((item) => item.studentId === student.id);
+  const weakTopics = makeWeakTopics(db, student);
+  const plan = db.learningPlans.find((item) => item.studentId === student.id && item.status === "active");
+  const recommendations = [
+    weakTopics[0] ? `Повторить тему: ${weakTopics[0].topic}` : "Продолжать короткую ежедневную практику",
+    "Заниматься 15-25 минут без перегруза",
+    "После ошибки просить ребёнка объяснить ход решения своими словами",
+    plan ? `Следовать плану: ${plan.focusTopic}` : "Составить недельный план занятий"
+  ];
+  return {
+    student: { id: student.id, name: student.name, grade: student.grade, points: student.points },
+    currentTopic: lastQuestion?.topic || plan?.focusTopic || "Тема ещё не выбрана",
+    weakTopics,
+    recommendations,
+    plan,
+    cloud: makeCloudStatus()
+  };
+}
+
 async function importPhotoToKnowledgeBase(kb, body) {
   const imageData = String(body.imageData || "");
   const fileName = cleanText(body.fileName || "textbook-photo.png");
@@ -853,11 +1056,28 @@ async function extractEducationalPhotoText({ imageData, grade, subjectTitle, top
 }
 
 function readDb() {
-  return JSON.parse(fs.readFileSync(dbPath, "utf8"));
+  return normalizeDb(JSON.parse(fs.readFileSync(dbPath, "utf8")));
 }
 
 function writeDb(db) {
   fs.writeFileSync(dbPath, JSON.stringify(db, null, 2), "utf8");
+}
+
+function normalizeDb(db) {
+  const defaults = {
+    students: [],
+    accounts: [],
+    parentLinks: [],
+    learningPlans: [],
+    trainerAttempts: [],
+    cloudSync: [],
+    questions: [],
+    quizAttempts: [],
+    feedback: [],
+    photos: [],
+    events: []
+  };
+  return { ...defaults, ...db };
 }
 
 function createStudent(name, grade) {

@@ -20,10 +20,12 @@
 
       <nav class="nav-list">
         <a href="#profile" class="active" data-i18n="navProfile">Профиль</a>
+        <a href="#account">Кабинет</a>
         <a href="#learn" data-i18n="navLearn">Учеба</a>
         <a href="#textbooks" data-i18n="navTextbooks">Учебники</a>
         <a href="#knowledge" data-i18n="knowledgeBase">База знаний</a>
         <a href="#assistant" data-i18n="navAssistant">Помощник</a>
+        <a href="#smartPlan">План</a>
         <a href="#test" data-i18n="navEnt">ЕНТ</a>
         <a href="#parents" data-i18n="navParents">Успеваемость</a>
         <a href="#analytics" data-i18n="navAnalytics">Аналитика</a>
@@ -153,6 +155,30 @@
           </label>
         </div>
         <p class="system-note" id="profileNote">Проверяем подключение к серверу...</p>
+      </section>
+
+      <section class="account-panel" id="account">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Личный кабинет</p>
+            <h2>Ученик, родитель и облако</h2>
+          </div>
+          <span class="pill" id="cloudStatusPill">local</span>
+        </div>
+        <div class="account-grid">
+          <article>
+            <strong>Кабинет ученика</strong>
+            <p id="studentCabinetText">Профиль готовится...</p>
+          </article>
+          <article>
+            <strong>Кабинет родителя</strong>
+            <p id="parentCabinetText">Родитель увидит темы, слабые места и рекомендации.</p>
+          </article>
+          <article>
+            <strong>Облачный backend</strong>
+            <p id="cloudBackendText">Сейчас локальный режим. Для общей базы нужен облачный провайдер.</p>
+          </article>
+        </div>
       </section>
 
       <section class="subject-grid" id="learn" aria-label="Предметы"></section>
@@ -291,6 +317,60 @@
           </div>
           <div id="progressRows"></div>
           <p class="parent-note" id="parentNote"></p>
+        </div>
+      </section>
+
+      <section class="advanced-grid" id="smartPlan">
+        <div class="learning-plan-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">План занятий</p>
+              <h2>Недельный маршрут</h2>
+            </div>
+            <button class="ghost-btn" id="generatePlanBtn" type="button">Составить план</button>
+          </div>
+          <ul class="task-list" id="weeklyPlanList"></ul>
+        </div>
+
+        <div class="trainer-panel" id="giaTrainer">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Тренажёр</p>
+              <h2>ГИА / ЕНТ без выдуманных официальных заданий</h2>
+            </div>
+            <select id="trainerModeSelect" aria-label="Режим тренажёра">
+              <option value="gia">ГИА</option>
+              <option value="ent">ЕНТ</option>
+              <option value="weak">Слабые темы</option>
+            </select>
+          </div>
+          <p class="question" id="trainerQuestion"></p>
+          <div class="answer-grid" id="trainerAnswers"></div>
+          <p class="result" id="trainerResult"></p>
+          <button class="ghost-btn" id="nextTrainerBtn" type="button">Следующий вопрос</button>
+        </div>
+      </section>
+
+      <section class="parent-insight-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Родительский анализ</p>
+            <h2>Что изучает ребёнок и где нужна помощь</h2>
+          </div>
+        </div>
+        <div class="insight-grid">
+          <article>
+            <strong>Текущая тема</strong>
+            <p id="currentTopicInsight">Выберите предмет.</p>
+          </article>
+          <article>
+            <strong>Слабые темы</strong>
+            <ul id="weakTopicsList"></ul>
+          </article>
+          <article>
+            <strong>Рекомендации</strong>
+            <ul id="recommendationList"></ul>
+          </article>
         </div>
       </section>
 
