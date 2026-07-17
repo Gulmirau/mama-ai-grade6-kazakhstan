@@ -869,6 +869,15 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue); }
   background: #f8fafc;
 }
 
+.lifecycle-box {
+  border-color: rgba(47, 128, 237, 0.22);
+}
+
+.lifecycle-list {
+  max-height: 230px;
+  overflow: auto;
+}
+
 .feedback-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;

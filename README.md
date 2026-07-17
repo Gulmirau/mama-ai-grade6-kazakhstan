@@ -33,9 +33,13 @@ Next official-data steps: collect verified Kazakhstan educational materials, rec
 - GIA / ENT trainer shell with demo diagnostic questions.
 - Trainer attempt tracking.
 - Cloud backend status endpoint: `GET /api/cloud/status`.
+- Account inactivity lifecycle: `GET /api/account/lifecycle` and `POST /api/account/lifecycle/run`.
+- After 30 days without login Mama AI queues an email warning; after 3 more days without login the student account and related local records are deleted. The day counts can be changed with `INACTIVITY_WARNING_DAYS` and `INACTIVITY_GRACE_DAYS`.
 - Cloud-ready env configuration in `.env.example`.
 
 The trainer does not include official GIA / ENT materials yet. It uses demo questions until verified materials are imported into the Knowledge Base.
+
+Real warning emails require an email provider. Until `EMAIL_PROVIDER` and sender settings are configured, warnings are saved in the local `notifications` queue and shown in the admin panel.
 
 # Mama AI
 

@@ -12,6 +12,9 @@ const kbPath = path.join(dataDir, "knowledge_base.json");
 const importsDir = path.join(dataDir, "imports");
 const port = Number(process.env.PORT || 3000);
 const sessions = new Map();
+const inactivityWarningDays = Number(process.env.INACTIVITY_WARNING_DAYS || 30);
+const inactivityGraceDays = Number(process.env.INACTIVITY_GRACE_DAYS || 3);
+const dayMs = 24 * 60 * 60 * 1000;
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -59,6 +62,7 @@ async function routeApi(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/session") {
     const body = await readJson(req);
     const db = readDb();
+    runAccountLifecycle(db);
     const role = body.role || "student";
     const name = cleanText(body.name || "Аружан");
     const grade = clampGrade(body.grade || 6);
@@ -70,7 +74,8 @@ async function routeApi(req, res, url) {
     }
 
     student.grade = grade;
-    student.lastSeenAt = new Date().toISOString();
+    markStudentActive(student);
+    cancelInactiveWarnings(db, student);
     addEvent(db, "Вход", `${name}, ${grade} класс, роль: ${role}`);
     writeDb(db);
 
@@ -82,6 +87,7 @@ async function routeApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/state") {
     const db = readDb();
+    if (runAccountLifecycle(db).changed) writeDb(db);
     const session = getSession(req);
     const student = session ? db.students.find((item) => item.id === session.studentId) : db.students[0];
     sendJson(res, 200, {
@@ -96,6 +102,21 @@ async function routeApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/cloud/status") {
     sendJson(res, 200, makeCloudStatus());
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/account/lifecycle") {
+    const db = readDb();
+    if (runAccountLifecycle(db).changed) writeDb(db);
+    sendJson(res, 200, makeAccountLifecycleReport(db));
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/account/lifecycle/run") {
+    const db = readDb();
+    const result = runAccountLifecycle(db, { force: true });
+    writeDb(db);
+    sendJson(res, 200, { ...makeAccountLifecycleReport(db), result });
     return;
   }
 
@@ -395,6 +416,8 @@ function ensureDb() {
     learningPlans: [],
     trainerAttempts: [],
     cloudSync: [],
+    notifications: [],
+    accountLifecycle: [],
     questions: [],
     quizAttempts: [],
     feedback: [],
@@ -737,16 +760,167 @@ function makeCloudStatus() {
   const provider = cleanText(process.env.CLOUD_BACKEND_PROVIDER || "local-json");
   const supabaseReady = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
   const firebaseReady = Boolean(process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY);
+  const emailProvider = cleanText(process.env.EMAIL_PROVIDER || "disabled");
+  const emailReady = emailProvider !== "disabled" && Boolean(process.env.EMAIL_FROM);
   const ready = provider === "supabase" ? supabaseReady : provider === "firebase" ? firebaseReady : false;
   return {
     provider,
     ready,
+    emailProvider,
+    emailReady,
     mode: ready ? "cloud_ready" : "local_json_active",
     message: ready
       ? "Cloud backend variables are configured. Adapter can be connected for production persistence."
       : "Local JSON backend is active. Add cloud provider credentials for shared production data.",
-    requiredForProduction: ["authentication", "shared_database", "file_storage", "OCR_queue", "analytics"]
+    requiredForProduction: ["authentication", "shared_database", "file_storage", "OCR_queue", "analytics", "email_provider"]
   };
+}
+
+function makeAccountLifecycleReport(db) {
+  const now = Date.now();
+  return {
+    policy: {
+      inactivityWarningDays,
+      inactivityGraceDays,
+      warningChannel: "email_queue",
+      emailProvider: cleanText(process.env.EMAIL_PROVIDER || "disabled"),
+      emailReady: Boolean(process.env.EMAIL_FROM && process.env.EMAIL_PROVIDER && process.env.EMAIL_PROVIDER !== "disabled")
+    },
+    students: db.students.map((student) => {
+      const lastSeen = Date.parse(student.lastSeenAt || student.createdAt || new Date().toISOString());
+      const daysInactive = Math.max(0, Math.floor((now - lastSeen) / dayMs));
+      return {
+        id: student.id,
+        name: student.name,
+        grade: student.grade,
+        status: student.status || "active",
+        lastSeenAt: student.lastSeenAt,
+        daysInactive,
+        warningSentAt: student.inactivityWarningSentAt || null,
+        scheduledDeletionAt: student.scheduledDeletionAt || null
+      };
+    }),
+    notifications: db.notifications.slice(0, 50),
+    accountLifecycle: db.accountLifecycle.slice(0, 50)
+  };
+}
+
+function runAccountLifecycle(db) {
+  const now = new Date();
+  let changed = false;
+  const deleted = [];
+  const warned = [];
+
+  for (const student of [...db.students]) {
+    const lastSeenAt = Date.parse(student.lastSeenAt || student.createdAt || now.toISOString());
+    const warningCutoff = now.getTime() - inactivityWarningDays * dayMs;
+    const scheduledDeletionAt = student.scheduledDeletionAt ? Date.parse(student.scheduledDeletionAt) : null;
+
+    if (student.scheduledDeletionAt && lastSeenAt > Date.parse(student.inactivityWarningSentAt || student.scheduledDeletionAt)) {
+      delete student.scheduledDeletionAt;
+      delete student.inactivityWarningSentAt;
+      student.status = "active";
+      addAccountLifecycleEvent(db, student, "reactivated", "Student logged in after inactivity warning.");
+      changed = true;
+      continue;
+    }
+
+    if (scheduledDeletionAt && scheduledDeletionAt <= now.getTime()) {
+      deleteStudentData(db, student, "inactive_after_warning");
+      deleted.push(student.id);
+      changed = true;
+      continue;
+    }
+
+    if (lastSeenAt <= warningCutoff && !student.inactivityWarningSentAt) {
+      const deletionDate = new Date(now.getTime() + inactivityGraceDays * dayMs).toISOString();
+      student.inactivityWarningSentAt = now.toISOString();
+      student.scheduledDeletionAt = deletionDate;
+      student.status = "warning_sent";
+      queueInactiveWarning(db, student, deletionDate);
+      addAccountLifecycleEvent(db, student, "warning_queued", `Inactive for ${inactivityWarningDays} days; deletion scheduled after ${inactivityGraceDays} days.`);
+      warned.push(student.id);
+      changed = true;
+    }
+  }
+
+  return { changed, warned, deleted };
+}
+
+function markStudentActive(student) {
+  student.lastSeenAt = new Date().toISOString();
+  student.status = "active";
+  delete student.scheduledDeletionAt;
+  delete student.inactivityWarningSentAt;
+}
+
+function cancelInactiveWarnings(db, student) {
+  let cancelled = false;
+  for (const notification of db.notifications) {
+    if (notification.studentId === student.id && notification.type === "inactive_account_warning" && String(notification.status || "").startsWith("queued")) {
+      notification.status = "cancelled_student_logged_in";
+      notification.cancelledAt = new Date().toISOString();
+      cancelled = true;
+    }
+  }
+  if (cancelled) {
+    addAccountLifecycleEvent(db, student, "warning_cancelled", "Student logged in before scheduled deletion.");
+  }
+}
+
+function queueInactiveWarning(db, student, deletionDate) {
+  const existing = db.notifications.find((item) => (
+    item.studentId === student.id
+    && item.type === "inactive_account_warning"
+    && ["queued", "sent"].includes(item.status)
+  ));
+  if (existing) return existing;
+
+  const account = db.accounts.find((item) => item.studentId === student.id && item.email);
+  const email = student.email || account?.email || "";
+  const notification = {
+    id: crypto.randomUUID(),
+    type: "inactive_account_warning",
+    channel: "email",
+    status: cleanText(process.env.EMAIL_PROVIDER || "disabled") === "disabled" ? "queued_email_provider_required" : "queued",
+    studentId: student.id,
+    studentName: student.name,
+    email,
+    subject: "Mama AI: account inactivity warning",
+    body: `Your Mama AI student account has been inactive for ${inactivityWarningDays} days. Please log in within ${inactivityGraceDays} days to keep it active. Scheduled deletion: ${deletionDate}.`,
+    deleteAfter: deletionDate,
+    createdAt: new Date().toISOString()
+  };
+  db.notifications.unshift(notification);
+  db.notifications = db.notifications.slice(0, 200);
+  return notification;
+}
+
+function deleteStudentData(db, student, reason) {
+  const studentId = student.id;
+  db.students = db.students.filter((item) => item.id !== studentId);
+  db.accounts = db.accounts.filter((item) => item.studentId !== studentId);
+  db.parentLinks = db.parentLinks.filter((item) => item.studentId !== studentId);
+  db.learningPlans = db.learningPlans.filter((item) => item.studentId !== studentId);
+  db.trainerAttempts = db.trainerAttempts.filter((item) => item.studentId !== studentId);
+  db.questions = db.questions.filter((item) => item.studentId !== studentId);
+  db.quizAttempts = db.quizAttempts.filter((item) => item.studentId !== studentId);
+  db.feedback = db.feedback.filter((item) => item.studentId !== studentId);
+  db.photos = db.photos.filter((item) => item.studentId !== studentId);
+  addAccountLifecycleEvent(db, student, "deleted", reason);
+  addEvent(db, "Account lifecycle", `${student.name}: deleted after inactivity`);
+}
+
+function addAccountLifecycleEvent(db, student, action, detail) {
+  db.accountLifecycle.unshift({
+    id: crypto.randomUUID(),
+    studentId: student.id,
+    studentName: student.name,
+    action,
+    detail,
+    createdAt: new Date().toISOString()
+  });
+  db.accountLifecycle = db.accountLifecycle.slice(0, 200);
 }
 
 function upsertAccount(db, student, body) {
@@ -764,6 +938,8 @@ function upsertAccount(db, student, body) {
   }
   account.name = role === "parent" ? parentName : student.name;
   account.grade = student.grade;
+  account.email = cleanText(body.email || account.email || student.email || "");
+  if (role === "student" && account.email) student.email = account.email;
   account.learningLanguage = cleanText(body.language || "ru");
   account.updatedAt = new Date().toISOString();
 
@@ -1071,6 +1247,8 @@ function normalizeDb(db) {
     learningPlans: [],
     trainerAttempts: [],
     cloudSync: [],
+    notifications: [],
+    accountLifecycle: [],
     questions: [],
     quizAttempts: [],
     feedback: [],
@@ -1078,9 +1256,6 @@ function normalizeDb(db) {
     events: []
   };
   const normalized = { ...defaults, ...db };
-  if (!normalized.students.length) {
-    normalized.students.push(createStudent("Аружан", 6));
-  }
   return normalized;
 }
 
@@ -1090,6 +1265,7 @@ function createStudent(name, grade) {
     name,
     grade,
     role: "student",
+    status: "active",
     points: 120,
     streak: 5,
     grades: [
@@ -1122,7 +1298,8 @@ function getOrCreateStudent(db, session, body) {
     db.students.push(student);
   }
   student.grade = grade;
-  student.lastSeenAt = new Date().toISOString();
+  markStudentActive(student);
+  cancelInactiveWarnings(db, student);
   return student;
 }
 

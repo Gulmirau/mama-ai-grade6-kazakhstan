@@ -315,6 +315,10 @@ const trainerResult = document.getElementById("trainerResult");
 const weakTopicsList = document.getElementById("weakTopicsList");
 const recommendationList = document.getElementById("recommendationList");
 const currentTopicInsight = document.getElementById("currentTopicInsight");
+const runLifecycleBtn = document.getElementById("runLifecycleBtn");
+const lifecyclePolicy = document.getElementById("lifecyclePolicy");
+const lifecycleList = document.getElementById("lifecycleList");
+const lifecycleEmailStatus = document.getElementById("lifecycleEmailStatus");
 
 init();
 
@@ -519,6 +523,32 @@ function makePublicApiFallback(path, body = {}) {
     };
   }
 
+  if (path === "/api/account/lifecycle" || path === "/api/account/lifecycle/run") {
+    return {
+      policy: {
+        inactivityWarningDays: 30,
+        inactivityGraceDays: 3,
+        warningChannel: "email_queue",
+        emailProvider: "disabled",
+        emailReady: false
+      },
+      students: [
+        {
+          id: "public-demo-student",
+          name: studentName.value.trim() || "Student",
+          grade: currentGrade,
+          status: "active",
+          lastSeenAt: new Date().toISOString(),
+          daysInactive: 0,
+          warningSentAt: null,
+          scheduledDeletionAt: null
+        }
+      ],
+      notifications: [],
+      accountLifecycle: []
+    };
+  }
+
   if (path === "/api/parent/summary") {
     return makeLocalParentSummary();
   }
@@ -706,6 +736,7 @@ function bindEvents() {
   });
 
   document.getElementById("gradeImportForm").addEventListener("submit", importGrades);
+  if (runLifecycleBtn) runLifecycleBtn.addEventListener("click", runAccountLifecycleCheck);
   document.getElementById("generatePlanBtn").addEventListener("click", generateSmartPlan);
   document.getElementById("nextTrainerBtn").addEventListener("click", renderTrainerQuestion);
   trainerModeSelect.addEventListener("change", renderTrainerQuestion);
@@ -1529,6 +1560,54 @@ function renderAnalytics() {
   document.getElementById("helpfulMetric").textContent = analytics.helpful;
   document.getElementById("wrongMetric").textContent = analytics.wrong;
   document.getElementById("eventList").innerHTML = analytics.events.slice(0, 8).map((event) => `<li><strong>${event.type}</strong><span>${event.detail}</span><small>${event.date}</small></li>`).join("");
+  renderAccountLifecycleStatus();
+}
+
+async function renderAccountLifecycleStatus() {
+  if (!lifecycleList) return;
+  try {
+    const report = await apiFetch("/api/account/lifecycle", {}, false);
+    const policy = report.policy || {};
+    lifecyclePolicy.textContent = `Проверка: ${policy.inactivityWarningDays || 30} дней без входа, предупреждение, затем ${policy.inactivityGraceDays || 3} дня ожидания перед удалением.`;
+    lifecycleEmailStatus.textContent = policy.emailReady
+      ? `Email включен: ${policy.emailProvider}.`
+      : "Email пока не подключен: предупреждения сохраняются в очередь уведомлений.";
+    const students = report.students || [];
+    lifecycleList.innerHTML = students.slice(0, 8).map((student) => {
+      const deletion = student.scheduledDeletionAt ? `Удаление: ${formatShortDate(student.scheduledDeletionAt)}` : "Удаление не запланировано";
+      return `<li><strong>${student.name}</strong><span>${student.status || "active"} · неактивен ${student.daysInactive || 0} дн. · ${deletion}</span><small>${student.lastSeenAt ? formatShortDate(student.lastSeenAt) : ""}</small></li>`;
+    }).join("") || "<li><strong>Нет учеников</strong><span>Пока нет аккаунтов для проверки</span></li>";
+  } catch {
+    lifecycleList.innerHTML = "<li><strong>Локальный режим</strong><span>Статус удаления доступен после запуска сервера.</span></li>";
+  }
+}
+
+async function runAccountLifecycleCheck() {
+  if (!runLifecycleBtn) return;
+  runLifecycleBtn.disabled = true;
+  runLifecycleBtn.textContent = "Проверяю...";
+  try {
+    const report = await apiFetch("/api/account/lifecycle/run", { method: "POST", body: {} }, false);
+    const result = report.result || {};
+    addMessage("bot success", `Проверка аккаунтов завершена. Предупреждений: ${(result.warned || []).length}, удалено: ${(result.deleted || []).length}.`);
+    renderAccountLifecycleStatus();
+  } catch {
+    addMessage("bot", "Не удалось запустить проверку аккаунтов. Проверь, запущен ли сервер.");
+  } finally {
+    runLifecycleBtn.disabled = false;
+    runLifecycleBtn.textContent = "Проверить сейчас";
+  }
+}
+
+function formatShortDate(value) {
+  try {
+    return new Intl.DateTimeFormat("ru-RU", {
+      dateStyle: "short",
+      timeStyle: "short"
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
 }
 
 function recordEvent(type, detail) {

@@ -28,6 +28,14 @@ SUPABASE_SERVICE_ROLE_KEY=
 FIREBASE_PROJECT_ID=
 FIREBASE_CLIENT_EMAIL=
 FIREBASE_PRIVATE_KEY=
+INACTIVITY_WARNING_DAYS=30
+INACTIVITY_GRACE_DAYS=3
+EMAIL_PROVIDER=disabled
+SMTP_HOST=
+SMTP_PORT=
+SMTP_USER=
+SMTP_PASS=
+EMAIL_FROM=
 ```
 
 Supported status endpoint:
@@ -35,6 +43,15 @@ Supported status endpoint:
 `GET /api/cloud/status`
 
 The current implementation reports whether cloud variables are configured. The app keeps working on local JSON until a real provider is connected.
+
+Account lifecycle endpoints:
+
+- `GET /api/account/lifecycle`
+- `POST /api/account/lifecycle/run`
+
+Default policy: after 30 days without login, Mama AI queues an email warning. If the student does not log in within 3 more days, the local student account and related local records are deleted. If the student logs in during the grace period, the scheduled deletion is cancelled.
+
+Email sending is intentionally separated from the cleanup rule. Until a real provider is configured, warnings stay in the `notifications` queue with status `queued_email_provider_required`.
 
 ## New Product Features
 
@@ -47,6 +64,7 @@ The current implementation reports whether cloud variables are configured. The a
 - Recommendations
 - Photo import status
 - Cloud backend status
+- Inactive student warning and cleanup policy
 
 ## Important
 

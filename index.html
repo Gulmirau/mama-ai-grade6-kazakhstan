@@ -410,6 +410,15 @@
               <button type="submit" class="ghost-btn" data-i18n="uploadGrades">Загрузить оценки</button>
             </div>
           </form>
+          <div class="feedback-box lifecycle-box">
+            <h3>Неактивные аккаунты</h3>
+            <p id="lifecyclePolicy">Проверка: 30 дней без входа, затем предупреждение и 3 дня ожидания.</p>
+            <div class="feedback-actions single">
+              <button type="button" class="ghost-btn" id="runLifecycleBtn">Проверить сейчас</button>
+            </div>
+            <ul class="event-list lifecycle-list" id="lifecycleList"></ul>
+            <p class="parent-note" id="lifecycleEmailStatus"></p>
+          </div>
         </div>
       </section>
     </main>
