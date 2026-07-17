@@ -1056,7 +1056,7 @@ async function extractEducationalPhotoText({ imageData, grade, subjectTitle, top
 }
 
 function readDb() {
-  return normalizeDb(JSON.parse(fs.readFileSync(dbPath, "utf8")));
+  return normalizeDb(JSON.parse(fs.readFileSync(dbPath, "utf8").replace(/^\uFEFF/, "")));
 }
 
 function writeDb(db) {
@@ -1077,7 +1077,11 @@ function normalizeDb(db) {
     photos: [],
     events: []
   };
-  return { ...defaults, ...db };
+  const normalized = { ...defaults, ...db };
+  if (!normalized.students.length) {
+    normalized.students.push(createStudent("Аружан", 6));
+  }
+  return normalized;
 }
 
 function createStudent(name, grade) {
