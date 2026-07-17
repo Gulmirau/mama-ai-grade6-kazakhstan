@@ -281,6 +281,8 @@ const interfaceLanguageSelect = document.getElementById("interfaceLanguageSelect
 const learningLanguageSelect = document.getElementById("learningLanguageSelect");
 const studentName = document.getElementById("studentName");
 const studentCity = document.getElementById("studentCity");
+const userEmail = document.getElementById("userEmail");
+const authProviderSelect = document.getElementById("authProviderSelect");
 const animationToggle = document.getElementById("animationToggle");
 const soundToggle = document.getElementById("soundToggle");
 const reducedMotionToggle = document.getElementById("reducedMotionToggle");
@@ -309,6 +311,7 @@ const cloudStatusPill = document.getElementById("cloudStatusPill");
 const studentCabinetText = document.getElementById("studentCabinetText");
 const parentCabinetText = document.getElementById("parentCabinetText");
 const cloudBackendText = document.getElementById("cloudBackendText");
+const authStatusText = document.getElementById("authStatusText");
 const weeklyPlanList = document.getElementById("weeklyPlanList");
 const trainerModeSelect = document.getElementById("trainerModeSelect");
 const trainerQuestion = document.getElementById("trainerQuestion");
@@ -321,6 +324,9 @@ const runLifecycleBtn = document.getElementById("runLifecycleBtn");
 const lifecyclePolicy = document.getElementById("lifecyclePolicy");
 const lifecycleList = document.getElementById("lifecycleList");
 const lifecycleEmailStatus = document.getElementById("lifecycleEmailStatus");
+const adminAccessText = document.getElementById("adminAccessText");
+const adminStudentRows = document.getElementById("adminStudentRows");
+const inactiveStudentList = document.getElementById("inactiveStudentList");
 
 init();
 
@@ -333,6 +339,8 @@ async function init() {
   interfaceLanguageSelect.value = uiLang;
   learningLanguageSelect.value = currentLang;
   if (studentCity) studentCity.value = localStorage.getItem("mamaAiCity") || studentCity.value || "Алматы";
+  if (userEmail) userEmail.value = localStorage.getItem("mamaAiEmail") || userEmail.value || "";
+  if (authProviderSelect) authProviderSelect.value = localStorage.getItem("mamaAiAuthProvider") || "email";
   trackLocalCity();
   fillGrades();
   bindEvents();
@@ -360,6 +368,8 @@ async function initServerSession() {
       body: {
         name: studentName.value.trim() || "Аружан",
         city: studentCity?.value.trim() || "Алматы",
+        email: userEmail?.value.trim() || "",
+        authProvider: authProviderSelect?.value || "email",
         grade: currentGrade,
         role: roleSelect.value
       }
@@ -425,6 +435,7 @@ function makePublicApiFallback(path, body = {}) {
         id: "public-demo-student",
         name: body.name || studentName.value.trim() || "Ученик",
         city: body.city || studentCity?.value.trim() || "Алматы",
+        email: body.email || userEmail?.value.trim() || "",
         grade: currentGrade,
         points,
         streak,
@@ -445,7 +456,7 @@ function makePublicApiFallback(path, body = {}) {
         grades: []
       },
       students: [],
-      analytics,
+      analytics: { ...analytics, studentsByGrade: {}, inactiveStudents: [] },
       events: [],
       aiConfigured: false
     };
@@ -554,6 +565,10 @@ function makePublicApiFallback(path, body = {}) {
       notifications: [],
       accountLifecycle: []
     };
+  }
+
+  if (path === "/api/admin/students") {
+    return makeLocalAdminStudents();
   }
 
   if (path === "/api/parent/summary") {
@@ -699,6 +714,23 @@ function bindEvents() {
       recordEvent("Город", `Выбран город: ${city}`);
       initServerSession();
       renderAnalytics();
+    });
+  }
+
+  if (userEmail) {
+    userEmail.addEventListener("change", () => {
+      localStorage.setItem("mamaAiEmail", userEmail.value.trim());
+      recordEvent("Email", userEmail.value.trim() ? "Email добавлен в профиль" : "Email очищен");
+      initServerSession();
+    });
+  }
+
+  if (authProviderSelect) {
+    authProviderSelect.addEventListener("change", () => {
+      localStorage.setItem("mamaAiAuthProvider", authProviderSelect.value);
+      recordEvent("Авторизация", `Способ входа: ${authProviderSelect.value}`);
+      initServerSession();
+      renderAccountAndParent();
     });
   }
 
@@ -1014,9 +1046,15 @@ async function renderAccountAndParent() {
     const cloud = await apiFetch("/api/cloud/status", {}, false);
     cloudStatusPill.textContent = cloud.mode || cloud.provider || "local";
     cloudBackendText.textContent = cloud.message || "Локальный режим активен.";
+    if (authStatusText) {
+      authStatusText.textContent = cloud.authReady
+        ? `Supabase Auth готов: ${authProviderSelect?.value || "email"}.`
+        : `Подготовлено под Supabase Auth. Сейчас вход: ${authProviderSelect?.value || "email"}, локальный режим.`;
+    }
   } catch {
     cloudStatusPill.textContent = "local";
     cloudBackendText.textContent = "Публичный/локальный режим. Для общей базы нужен облачный backend.";
+    if (authStatusText) authStatusText.textContent = "Локальный режим авторизации.";
   }
 
   try {
@@ -1040,6 +1078,29 @@ function makeLocalParentSummary() {
       "После ошибки просить ребёнка объяснить ход решения"
     ],
     plan: makeLocalPlan()
+  };
+}
+
+function makeLocalAdminStudents() {
+  const city = studentCity?.value.trim() || "Алматы";
+  return {
+    ownerOnly: roleSelect.value === "admin",
+    adminEmail: "gulmirau1979@gmail.com",
+    students: [
+      {
+        id: "public-demo-student",
+        name: studentName.value.trim() || "Ученик",
+        grade: currentGrade,
+        city,
+        email: userEmail?.value.trim() || "",
+        role: roleSelect.value,
+        status: "active",
+        lastSeenAt: new Date().toISOString(),
+        daysInactive: 0,
+        points
+      }
+    ],
+    inactiveStudents: []
   };
 }
 
@@ -1592,6 +1653,41 @@ function renderAnalytics() {
       .join("") || "<li><strong>Нет данных</strong><span>Город появится после авторизации</span></li>";
   }
   renderAccountLifecycleStatus();
+  renderAdminStudents();
+}
+
+async function renderAdminStudents() {
+  if (!adminStudentRows || !inactiveStudentList) return;
+  try {
+    const report = await apiFetch("/api/admin/students", {}, false);
+    const ownerOnly = Boolean(report.ownerOnly);
+    const currentEmail = userEmail?.value.trim().toLowerCase() || "";
+    const isOwner = ownerOnly || currentEmail === String(report.adminEmail || "").toLowerCase();
+    if (adminAccessText) {
+      adminAccessText.textContent = isOwner
+        ? "Админ-доступ активен. Видна сводка учеников, городов и активности."
+        : `Полный доступ только для ${report.adminEmail || "владельца"}. Сейчас показан безопасный демо-режим.`;
+    }
+
+    const rows = (report.students || []).slice(0, 20);
+    adminStudentRows.innerHTML = rows.map((student) => `
+      <tr>
+        <td>${student.name || "Ученик"}</td>
+        <td>${student.grade || "-"}</td>
+        <td>${student.city || "Не указан"}</td>
+        <td>${student.daysInactive || 0} дн.</td>
+        <td>${student.status || "active"}</td>
+      </tr>
+    `).join("") || "<tr><td colspan=\"5\">Пока нет учеников</td></tr>";
+
+    const inactive = report.inactiveStudents?.length ? report.inactiveStudents : [];
+    inactiveStudentList.innerHTML = inactive.slice(0, 8).map((student) => (
+      `<li><strong>${student.name}</strong><span>${student.city || "Не указан"} · ${student.grade || "-"} класс · ${student.daysInactive || 0} дн. без входа</span><small>${student.status || "active"}</small></li>`
+    )).join("") || "<li><strong>Все хорошо</strong><span>Нет учеников с долгой неактивностью</span></li>";
+  } catch {
+    adminStudentRows.innerHTML = "<tr><td colspan=\"5\">Админ-таблица доступна после запуска сервера</td></tr>";
+    inactiveStudentList.innerHTML = "<li><strong>Локальный режим</strong><span>Запустите сервер для проверки активности</span></li>";
+  }
 }
 
 async function renderAccountLifecycleStatus() {

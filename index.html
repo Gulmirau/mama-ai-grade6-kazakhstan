@@ -112,6 +112,18 @@
             <input id="studentCity" type="text" value="Алматы" placeholder="Например: Алматы" />
           </label>
           <label>
+            <span>Email</span>
+            <input id="userEmail" type="email" value="gulmirau1979@gmail.com" placeholder="name@example.com" />
+          </label>
+          <label>
+            <span>Вход</span>
+            <select id="authProviderSelect" aria-label="Способ входа">
+              <option value="email">Email</option>
+              <option value="google">Google</option>
+              <option value="phone_no_sms">Телефон без SMS</option>
+            </select>
+          </label>
+          <label>
             <span data-i18n="interfaceLanguage">Язык интерфейса</span>
             <select id="interfaceLanguageSelect" aria-label="Язык интерфейса">
               <option value="ru">Русский</option>
@@ -181,6 +193,10 @@
           <article>
             <strong>Облачный backend</strong>
             <p id="cloudBackendText">Сейчас локальный режим. Для общей базы нужен облачный провайдер.</p>
+          </article>
+          <article>
+            <strong>Авторизация</strong>
+            <p id="authStatusText">Supabase Auth будет подключён после добавления ключей.</p>
           </article>
         </div>
       </section>
@@ -403,6 +419,31 @@
           <div>
             <h3>Города</h3>
             <ul class="event-list city-list" id="cityAnalyticsList"></ul>
+          </div>
+          <div class="admin-only-box" id="adminAccessBox">
+            <h3>Админ-доступ</h3>
+            <p id="adminAccessText">Только владелец видит полную таблицу учеников.</p>
+          </div>
+          <div class="student-table-box">
+            <h3>Ученики по городам и классам</h3>
+            <div class="table-scroll">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Ученик</th>
+                    <th>Класс</th>
+                    <th>Город</th>
+                    <th>Активность</th>
+                    <th>Статус</th>
+                  </tr>
+                </thead>
+                <tbody id="adminStudentRows"></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <h3>Давно не заходили</h3>
+            <ul class="event-list" id="inactiveStudentList"></ul>
           </div>
           <form class="feedback-box" id="feedbackForm">
             <h3 data-i18n="studentFeedback">Отзыв ученика</h3>

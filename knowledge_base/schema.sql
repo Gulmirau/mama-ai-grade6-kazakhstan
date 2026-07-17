@@ -286,3 +286,32 @@ CREATE TABLE student_city_history (
 );
 
 CREATE INDEX idx_student_city_history_city ON student_city_history(city);
+
+CREATE TABLE accounts (
+  id TEXT PRIMARY KEY,
+  student_id TEXT REFERENCES students(id) ON DELETE CASCADE,
+  role TEXT NOT NULL,
+  name TEXT,
+  email TEXT,
+  city TEXT,
+  auth_provider TEXT DEFAULT 'email',
+  learning_language TEXT DEFAULT 'ru',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_accounts_email ON accounts(email);
+CREATE INDEX idx_accounts_role ON accounts(role);
+
+CREATE TABLE auth_events (
+  id TEXT PRIMARY KEY,
+  student_id TEXT REFERENCES students(id) ON DELETE SET NULL,
+  role TEXT,
+  email TEXT,
+  city TEXT,
+  auth_provider TEXT,
+  event_type TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_auth_events_created_at ON auth_events(created_at DESC);

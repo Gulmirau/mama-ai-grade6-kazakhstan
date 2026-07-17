@@ -14,6 +14,7 @@ const port = Number(process.env.PORT || 3000);
 const sessions = new Map();
 const inactivityWarningDays = Number(process.env.INACTIVITY_WARNING_DAYS || 30);
 const inactivityGraceDays = Number(process.env.INACTIVITY_GRACE_DAYS || 3);
+const adminEmail = cleanText(process.env.ADMIN_EMAIL || "gulmirau1979@gmail.com").toLowerCase();
 const dayMs = 24 * 60 * 60 * 1000;
 
 const mimeTypes = {
@@ -66,6 +67,8 @@ async function routeApi(req, res, url) {
     const role = body.role || "student";
     const name = cleanText(body.name || "Аружан");
     const city = normalizeCity(body.city || "Алматы");
+    const email = normalizeEmail(body.email || "");
+    const authProvider = cleanText(body.authProvider || "email");
     const grade = clampGrade(body.grade || 6);
     let student = db.students.find((item) => item.name.toLowerCase() === name.toLowerCase());
 
@@ -76,8 +79,11 @@ async function routeApi(req, res, url) {
 
     student.grade = grade;
     student.city = city;
+    student.email = email || student.email || "";
+    student.authProvider = authProvider;
     markStudentActive(student);
     cancelInactiveWarnings(db, student);
+    upsertAccount(db, student, { role, email, city, authProvider, language: body.language || "ru" });
     addEvent(db, "Вход", `${name}, ${grade} класс, роль: ${role}, город: ${city}`);
     const cloudSync = await syncStudentToSupabase(student, role);
     if (cloudSync.status !== "skipped") db.cloudSync.unshift(cloudSync);
@@ -122,6 +128,15 @@ async function routeApi(req, res, url) {
     const result = runAccountLifecycle(db, { force: true });
     writeDb(db);
     sendJson(res, 200, { ...makeAccountLifecycleReport(db), result });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/admin/students") {
+    const db = readDb();
+    if (runAccountLifecycle(db).changed) writeDb(db);
+    const session = getSession(req);
+    const student = session ? db.students.find((item) => item.id === session.studentId) : null;
+    sendJson(res, 200, makeAdminStudentReport(db, student, session));
     return;
   }
 
@@ -767,6 +782,7 @@ function makeCloudStatus() {
   const firebaseReady = Boolean(process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY);
   const emailProvider = cleanText(process.env.EMAIL_PROVIDER || "disabled");
   const emailReady = emailProvider !== "disabled" && Boolean(process.env.EMAIL_FROM);
+  const authReady = provider === "supabase" && supabaseReady && Boolean(process.env.SUPABASE_ANON_KEY);
   const ready = provider === "supabase" ? supabaseReady : provider === "firebase" ? firebaseReady : false;
   return {
     provider,
@@ -774,6 +790,8 @@ function makeCloudStatus() {
     supabaseReady,
     emailProvider,
     emailReady,
+    authReady,
+    adminEmail,
     mode: ready ? "cloud_ready" : "local_json_active",
     message: ready
       ? "Cloud backend variables are configured. Adapter can be connected for production persistence."
@@ -872,6 +890,43 @@ function makeAccountLifecycleReport(db) {
     }),
     notifications: db.notifications.slice(0, 50),
     accountLifecycle: db.accountLifecycle.slice(0, 50)
+  };
+}
+
+function makeAdminStudentReport(db, currentStudent, session) {
+  const now = Date.now();
+  const currentEmail = normalizeEmail(currentStudent?.email || "");
+  const ownerOnly = currentEmail === adminEmail || session?.role === "admin";
+  const students = db.students.map((student) => {
+    const lastSeen = Date.parse(student.lastSeenAt || student.createdAt || new Date().toISOString());
+    return {
+      id: student.id,
+      name: student.name,
+      grade: student.grade,
+      city: normalizeCity(student.city || "Не указан"),
+      email: ownerOnly ? (student.email || "") : "",
+      role: student.role || "student",
+      status: student.status || "active",
+      points: Number(student.points || 0),
+      lastSeenAt: student.lastSeenAt,
+      daysInactive: Math.max(0, Math.floor((now - lastSeen) / dayMs))
+    };
+  }).sort((a, b) => b.daysInactive - a.daysInactive);
+
+  const studentsByGrade = {};
+  const studentsByCity = {};
+  for (const student of students) {
+    studentsByGrade[student.grade] = (studentsByGrade[student.grade] || 0) + 1;
+    studentsByCity[student.city] = (studentsByCity[student.city] || 0) + 1;
+  }
+
+  return {
+    ownerOnly,
+    adminEmail,
+    students,
+    studentsByGrade,
+    studentsByCity,
+    inactiveStudents: students.filter((student) => student.daysInactive >= Math.max(7, Math.floor(inactivityWarningDays / 2)))
   };
 }
 
@@ -1010,8 +1065,9 @@ function upsertAccount(db, student, body) {
   account.grade = student.grade;
   account.city = normalizeCity(body.city || student.city || account.city || "");
   if (account.city) student.city = account.city;
-  account.email = cleanText(body.email || account.email || student.email || "");
+  account.email = normalizeEmail(body.email || account.email || student.email || "");
   if (role === "student" && account.email) student.email = account.email;
+  account.authProvider = cleanText(body.authProvider || account.authProvider || "email");
   account.learningLanguage = cleanText(body.language || "ru");
   account.updatedAt = new Date().toISOString();
 
@@ -1366,6 +1422,7 @@ function getOrCreateStudent(db, session, body) {
   const name = cleanText(body.studentName || body.name || "Аружан");
   const grade = clampGrade(body.grade || 6);
   const city = normalizeCity(body.city || "");
+  const email = normalizeEmail(body.email || "");
   let student = db.students.find((item) => item.name.toLowerCase() === name.toLowerCase());
   if (!student) {
     student = createStudent(name, grade, city);
@@ -1373,6 +1430,7 @@ function getOrCreateStudent(db, session, body) {
   }
   student.grade = grade;
   if (city) student.city = city;
+  if (email) student.email = email;
   markStudentActive(student);
   cancelInactiveWarnings(db, student);
   return student;
@@ -1534,9 +1592,25 @@ function makeTutorFallback(data) {
 function makeAnalytics(db) {
   const uniqueStudents = new Set(db.students.map((item) => item.id));
   const cities = {};
+  const studentsByGrade = {};
+  const now = Date.now();
+  const inactiveStudents = [];
   for (const student of db.students) {
     const city = normalizeCity(student.city || "Не указан");
     cities[city] = (cities[city] || 0) + 1;
+    studentsByGrade[student.grade] = (studentsByGrade[student.grade] || 0) + 1;
+    const lastSeen = Date.parse(student.lastSeenAt || student.createdAt || new Date().toISOString());
+    const daysInactive = Math.max(0, Math.floor((now - lastSeen) / dayMs));
+    if (daysInactive >= Math.max(7, Math.floor(inactivityWarningDays / 2))) {
+      inactiveStudents.push({
+        id: student.id,
+        name: student.name,
+        grade: student.grade,
+        city,
+        daysInactive,
+        status: student.status || "active"
+      });
+    }
   }
   const correct = db.quizAttempts.filter((item) => item.correct).length;
   const wrong = db.quizAttempts.filter((item) => !item.correct).length;
@@ -1545,6 +1619,8 @@ function makeAnalytics(db) {
     visits: db.events.filter((item) => item.type === "Вход").length,
     users: uniqueStudents.size,
     cities,
+    studentsByGrade,
+    inactiveStudents,
     questions: db.questions.length,
     correct,
     wrong,
@@ -1587,6 +1663,10 @@ function normalizeCity(value) {
     .map((part) => /^[\p{L}]+$/u.test(part) ? part.charAt(0).toLocaleUpperCase("ru-RU") + part.slice(1).toLocaleLowerCase("ru-RU") : part)
     .join("")
     .slice(0, 80);
+}
+
+function normalizeEmail(value) {
+  return cleanText(value || "").toLowerCase().slice(0, 160);
 }
 
 function readJson(req, limit = 1_000_000) {
