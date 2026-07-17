@@ -257,3 +257,32 @@ CREATE TABLE chat_history (
   language_id TEXT REFERENCES languages(id),
   created_at TEXT
 );
+
+-- Cloud application tables for Supabase.
+-- These records are not official curriculum content; they are user/account analytics data.
+
+CREATE TABLE students (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  grade INTEGER NOT NULL,
+  city TEXT,
+  role TEXT NOT NULL DEFAULT 'student',
+  status TEXT NOT NULL DEFAULT 'active',
+  points INTEGER DEFAULT 0,
+  streak INTEGER DEFAULT 0,
+  last_seen_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_students_city ON students(city);
+CREATE INDEX idx_students_last_seen_at ON students(last_seen_at DESC);
+
+CREATE TABLE student_city_history (
+  id TEXT PRIMARY KEY,
+  student_id TEXT REFERENCES students(id) ON DELETE CASCADE,
+  city TEXT NOT NULL,
+  recorded_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_student_city_history_city ON student_city_history(city);

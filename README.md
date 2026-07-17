@@ -33,6 +33,8 @@ Next official-data steps: collect verified Kazakhstan educational materials, rec
 - GIA / ENT trainer shell with demo diagnostic questions.
 - Trainer attempt tracking.
 - Cloud backend status endpoint: `GET /api/cloud/status`.
+- Supabase is selected as the cloud database provider; local JSON remains the fallback until credentials are added.
+- City is collected during authorization and included in analytics for future regional reports.
 - Account inactivity lifecycle: `GET /api/account/lifecycle` and `POST /api/account/lifecycle/run`.
 - After 30 days without login Mama AI queues an email warning; after 3 more days without login the student account and related local records are deleted. The day counts can be changed with `INACTIVITY_WARNING_DAYS` and `INACTIVITY_GRACE_DAYS`.
 - Cloud-ready env configuration in `.env.example`.

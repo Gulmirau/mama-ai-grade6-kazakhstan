@@ -108,6 +108,10 @@
             <input id="studentName" type="text" value="Аружан" />
           </label>
           <label>
+            <span>Город</span>
+            <input id="studentCity" type="text" value="Алматы" placeholder="Например: Алматы" />
+          </label>
+          <label>
             <span data-i18n="interfaceLanguage">Язык интерфейса</span>
             <select id="interfaceLanguageSelect" aria-label="Язык интерфейса">
               <option value="ru">Русский</option>
@@ -385,6 +389,7 @@
         <div class="metric-grid">
           <div><strong id="visitsMetric">0</strong><span data-i18n="visits">заходов</span></div>
           <div><strong id="usersMetric">0</strong><span data-i18n="students">учеников</span></div>
+          <div><strong id="citiesMetric">0</strong><span>городов</span></div>
           <div><strong id="questionsMetric">0</strong><span data-i18n="questions">вопросов</span></div>
           <div><strong id="correctMetric">0%</strong><span data-i18n="correctAnswers">верных ответов</span></div>
           <div><strong id="helpfulMetric">0</strong><span data-i18n="helpfulFeedback">полезных отзывов</span></div>
@@ -394,6 +399,10 @@
           <div>
             <h3 data-i18n="latestActions">Последние действия</h3>
             <ul class="event-list" id="eventList"></ul>
+          </div>
+          <div>
+            <h3>Города</h3>
+            <ul class="event-list city-list" id="cityAnalyticsList"></ul>
           </div>
           <form class="feedback-box" id="feedbackForm">
             <h3 data-i18n="studentFeedback">Отзыв ученика</h3>

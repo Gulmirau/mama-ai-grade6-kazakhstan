@@ -245,6 +245,7 @@ const dailyThemes = [
 const analytics = JSON.parse(localStorage.getItem("mamaAiAnalytics") || "null") || {
   visits: 0,
   users: ["Аружан"],
+  cities: {},
   questions: 0,
   correct: 0,
   wrong: 0,
@@ -279,6 +280,7 @@ const roleSelect = document.getElementById("roleSelect");
 const interfaceLanguageSelect = document.getElementById("interfaceLanguageSelect");
 const learningLanguageSelect = document.getElementById("learningLanguageSelect");
 const studentName = document.getElementById("studentName");
+const studentCity = document.getElementById("studentCity");
 const animationToggle = document.getElementById("animationToggle");
 const soundToggle = document.getElementById("soundToggle");
 const reducedMotionToggle = document.getElementById("reducedMotionToggle");
@@ -330,6 +332,8 @@ async function init() {
   renderDailyTheme();
   interfaceLanguageSelect.value = uiLang;
   learningLanguageSelect.value = currentLang;
+  if (studentCity) studentCity.value = localStorage.getItem("mamaAiCity") || studentCity.value || "Алматы";
+  trackLocalCity();
   fillGrades();
   bindEvents();
   applyTranslations();
@@ -355,6 +359,7 @@ async function initServerSession() {
       method: "POST",
       body: {
         name: studentName.value.trim() || "Аружан",
+        city: studentCity?.value.trim() || "Алматы",
         grade: currentGrade,
         role: roleSelect.value
       }
@@ -419,6 +424,7 @@ function makePublicApiFallback(path, body = {}) {
       student: {
         id: "public-demo-student",
         name: body.name || studentName.value.trim() || "Ученик",
+        city: body.city || studentCity?.value.trim() || "Алматы",
         grade: currentGrade,
         points,
         streak,
@@ -432,6 +438,7 @@ function makePublicApiFallback(path, body = {}) {
       student: {
         id: "public-demo-student",
         name: studentName.value.trim() || "Ученик",
+        city: studentCity?.value.trim() || "Алматы",
         grade: currentGrade,
         points,
         streak,
@@ -683,6 +690,17 @@ function bindEvents() {
     initServerSession();
     renderAnalytics();
   });
+
+  if (studentCity) {
+    studentCity.addEventListener("change", () => {
+      const city = studentCity.value.trim() || "Алматы";
+      localStorage.setItem("mamaAiCity", city);
+      trackLocalCity();
+      recordEvent("Город", `Выбран город: ${city}`);
+      initServerSession();
+      renderAnalytics();
+    });
+  }
 
   roleSelect.addEventListener("change", () => {
     recordEvent("Роль", roleSelect.options[roleSelect.selectedIndex].textContent);
@@ -982,7 +1000,8 @@ function getProgressValue(key, index, title = "") {
 async function renderAccountAndParent() {
   const subject = currentSubject();
   if (studentCabinetText) {
-    studentCabinetText.textContent = `${studentName.value || "Ученик"}: ${currentGrade} класс, ${subjectLabel(subject.title)}, ${points} баллов.`;
+    const city = studentCity?.value.trim() || serverStudent?.city || "Алматы";
+    studentCabinetText.textContent = `${studentName.value || "Ученик"}: ${currentGrade} класс, ${city}, ${subjectLabel(subject.title)}, ${points} баллов.`;
   }
   if (parentCabinetText) {
     parentCabinetText.textContent = "Родительский кабинет показывает текущую тему, слабые места, рекомендации и план занятий.";
@@ -1537,6 +1556,7 @@ function applyServerAnalytics(serverAnalytics, events = []) {
   analytics.correct = serverAnalytics.correct ?? analytics.correct;
   analytics.wrong = serverAnalytics.wrong ?? analytics.wrong;
   analytics.helpful = serverAnalytics.helpful ?? analytics.helpful;
+  analytics.cities = serverAnalytics.cities || analytics.cities || {};
   if (serverAnalytics.users) {
     analytics.users = Array.from({ length: serverAnalytics.users }, (_, index) => `server-user-${index + 1}`);
   }
@@ -1555,11 +1575,22 @@ function renderAnalytics() {
   const totalAnswers = analytics.correct + analytics.wrong;
   document.getElementById("visitsMetric").textContent = analytics.visits;
   document.getElementById("usersMetric").textContent = analytics.users.length;
+  const cityEntries = Object.entries(analytics.cities || {});
+  const citiesMetric = document.getElementById("citiesMetric");
+  if (citiesMetric) citiesMetric.textContent = cityEntries.length;
   document.getElementById("questionsMetric").textContent = analytics.questions;
   document.getElementById("correctMetric").textContent = totalAnswers ? `${Math.round((analytics.correct / totalAnswers) * 100)}%` : "0%";
   document.getElementById("helpfulMetric").textContent = analytics.helpful;
   document.getElementById("wrongMetric").textContent = analytics.wrong;
   document.getElementById("eventList").innerHTML = analytics.events.slice(0, 8).map((event) => `<li><strong>${event.type}</strong><span>${event.detail}</span><small>${event.date}</small></li>`).join("");
+  const cityAnalyticsList = document.getElementById("cityAnalyticsList");
+  if (cityAnalyticsList) {
+    cityAnalyticsList.innerHTML = cityEntries
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([city, count]) => `<li><strong>${city}</strong><span>${count} ученик(ов)</span><small>город</small></li>`)
+      .join("") || "<li><strong>Нет данных</strong><span>Город появится после авторизации</span></li>";
+  }
   renderAccountLifecycleStatus();
 }
 
@@ -1613,6 +1644,14 @@ function formatShortDate(value) {
 function recordEvent(type, detail) {
   analytics.events.unshift({ type, detail, date: new Date().toLocaleString("ru-RU") });
   analytics.events = analytics.events.slice(0, 50);
+  saveAnalytics();
+}
+
+function trackLocalCity() {
+  const city = studentCity?.value.trim() || "Алматы";
+  analytics.cities = analytics.cities || {};
+  if (!analytics.cities[city]) analytics.cities[city] = 0;
+  analytics.cities[city] = Math.max(analytics.cities[city], 1);
   saveAnalytics();
 }
 

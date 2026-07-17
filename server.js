@@ -65,18 +65,23 @@ async function routeApi(req, res, url) {
     runAccountLifecycle(db);
     const role = body.role || "student";
     const name = cleanText(body.name || "Аружан");
+    const city = normalizeCity(body.city || "Алматы");
     const grade = clampGrade(body.grade || 6);
     let student = db.students.find((item) => item.name.toLowerCase() === name.toLowerCase());
 
     if (!student) {
-      student = createStudent(name, grade);
+      student = createStudent(name, grade, city);
       db.students.push(student);
     }
 
     student.grade = grade;
+    student.city = city;
     markStudentActive(student);
     cancelInactiveWarnings(db, student);
-    addEvent(db, "Вход", `${name}, ${grade} класс, роль: ${role}`);
+    addEvent(db, "Вход", `${name}, ${grade} класс, роль: ${role}, город: ${city}`);
+    const cloudSync = await syncStudentToSupabase(student, role);
+    if (cloudSync.status !== "skipped") db.cloudSync.unshift(cloudSync);
+    db.cloudSync = db.cloudSync.slice(0, 200);
     writeDb(db);
 
     const token = crypto.randomUUID();
@@ -408,7 +413,7 @@ function loadEnv() {
 function ensureDb() {
   fs.mkdirSync(dataDir, { recursive: true });
   if (fs.existsSync(dbPath)) return;
-  const student = createStudent("Аружан", 6);
+  const student = createStudent("Аружан", 6, "Алматы");
   const db = {
     students: [student],
     accounts: [],
@@ -757,7 +762,7 @@ function generateLessonPackage(kb, body) {
 }
 
 function makeCloudStatus() {
-  const provider = cleanText(process.env.CLOUD_BACKEND_PROVIDER || "local-json");
+  const provider = cleanText(process.env.CLOUD_BACKEND_PROVIDER || "supabase");
   const supabaseReady = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
   const firebaseReady = Boolean(process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY);
   const emailProvider = cleanText(process.env.EMAIL_PROVIDER || "disabled");
@@ -766,6 +771,7 @@ function makeCloudStatus() {
   return {
     provider,
     ready,
+    supabaseReady,
     emailProvider,
     emailReady,
     mode: ready ? "cloud_ready" : "local_json_active",
@@ -774,6 +780,70 @@ function makeCloudStatus() {
       : "Local JSON backend is active. Add cloud provider credentials for shared production data.",
     requiredForProduction: ["authentication", "shared_database", "file_storage", "OCR_queue", "analytics", "email_provider"]
   };
+}
+
+async function syncStudentToSupabase(student, role = "student") {
+  const status = makeCloudStatus();
+  if (status.provider !== "supabase" || !status.supabaseReady) {
+    return { status: "skipped", provider: status.provider, reason: "supabase_not_configured" };
+  }
+
+  const payload = {
+    id: student.id,
+    name: student.name,
+    grade: student.grade,
+    city: normalizeCity(student.city || ""),
+    role,
+    status: student.status || "active",
+    points: Number(student.points || 0),
+    streak: Number(student.streak || 0),
+    last_seen_at: student.lastSeenAt,
+    created_at: student.createdAt || new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  try {
+    const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/students?on_conflict=id`, {
+      method: "POST",
+      headers: {
+        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates,return=minimal"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      return {
+        id: crypto.randomUUID(),
+        provider: "supabase",
+        status: "error",
+        entity: "students",
+        message: text.slice(0, 220),
+        createdAt: new Date().toISOString()
+      };
+    }
+
+    return {
+      id: crypto.randomUUID(),
+      provider: "supabase",
+      status: "synced",
+      entity: "students",
+      studentId: student.id,
+      createdAt: new Date().toISOString()
+    };
+  } catch (error) {
+    return {
+      id: crypto.randomUUID(),
+      provider: "supabase",
+      status: "error",
+      entity: "students",
+      message: error.message,
+      createdAt: new Date().toISOString()
+    };
+  }
 }
 
 function makeAccountLifecycleReport(db) {
@@ -938,6 +1008,8 @@ function upsertAccount(db, student, body) {
   }
   account.name = role === "parent" ? parentName : student.name;
   account.grade = student.grade;
+  account.city = normalizeCity(body.city || student.city || account.city || "");
+  if (account.city) student.city = account.city;
   account.email = cleanText(body.email || account.email || student.email || "");
   if (role === "student" && account.email) student.email = account.email;
   account.learningLanguage = cleanText(body.language || "ru");
@@ -1259,11 +1331,12 @@ function normalizeDb(db) {
   return normalized;
 }
 
-function createStudent(name, grade) {
+function createStudent(name, grade, city = "") {
   return {
     id: crypto.randomUUID(),
     name,
     grade,
+    city: normalizeCity(city),
     role: "student",
     status: "active",
     points: 120,
@@ -1292,12 +1365,14 @@ function getOrCreateStudent(db, session, body) {
 
   const name = cleanText(body.studentName || body.name || "Аружан");
   const grade = clampGrade(body.grade || 6);
+  const city = normalizeCity(body.city || "");
   let student = db.students.find((item) => item.name.toLowerCase() === name.toLowerCase());
   if (!student) {
-    student = createStudent(name, grade);
+    student = createStudent(name, grade, city);
     db.students.push(student);
   }
   student.grade = grade;
+  if (city) student.city = city;
   markStudentActive(student);
   cancelInactiveWarnings(db, student);
   return student;
@@ -1458,12 +1533,18 @@ function makeTutorFallback(data) {
 
 function makeAnalytics(db) {
   const uniqueStudents = new Set(db.students.map((item) => item.id));
+  const cities = {};
+  for (const student of db.students) {
+    const city = normalizeCity(student.city || "Не указан");
+    cities[city] = (cities[city] || 0) + 1;
+  }
   const correct = db.quizAttempts.filter((item) => item.correct).length;
   const wrong = db.quizAttempts.filter((item) => !item.correct).length;
   const helpful = db.feedback.filter((item) => item.helpful).length;
   return {
     visits: db.events.filter((item) => item.type === "Вход").length,
     users: uniqueStudents.size,
+    cities,
     questions: db.questions.length,
     correct,
     wrong,
@@ -1496,6 +1577,16 @@ function clampGrade(value) {
 
 function cleanText(value) {
   return String(value || "").replace(/\s+/g, " ").trim().slice(0, 4000);
+}
+
+function normalizeCity(value) {
+  const city = cleanText(value || "");
+  if (!city) return "";
+  return city
+    .split(/([\s-]+)/)
+    .map((part) => /^[\p{L}]+$/u.test(part) ? part.charAt(0).toLocaleUpperCase("ru-RU") + part.slice(1).toLocaleLowerCase("ru-RU") : part)
+    .join("")
+    .slice(0, 80);
 }
 
 function readJson(req, limit = 1_000_000) {
