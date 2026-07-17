@@ -3,224 +3,479 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mama AI - учебный помощник для 6 класса</title>
+  <title>Mama AI — школьный помощник для 1–11 классов</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div class="daily-theme-layer" id="dailyThemeLayer" aria-hidden="true"></div>
   <div class="app-shell">
     <aside class="sidebar" aria-label="Навигация">
       <div class="brand">
         <div class="brand-mark">M</div>
         <div>
           <strong>Mama AI</strong>
-          <span>6 класс, Казахстан</span>
+          <span id="brandSubtitle">1–11 классы, Казахстан</span>
         </div>
       </div>
 
       <nav class="nav-list">
-        <a href="#learn" class="active">Учеба</a>
-        <a href="#homework">Домашка</a>
-        <a href="#quiz">Мини-тест</a>
-        <a href="#parents">Родителям</a>
+        <a href="#profile" class="active" data-i18n="navProfile">Профиль</a>
+        <a href="#account">Кабинет</a>
+        <a href="#learn" data-i18n="navLearn">Учеба</a>
+        <a href="#textbooks" data-i18n="navTextbooks">Учебники</a>
+        <a href="#knowledge" data-i18n="knowledgeBase">База знаний</a>
+        <a href="#assistant" data-i18n="navAssistant">Помощник</a>
+        <a href="#smartPlan">План</a>
+        <a href="#test" data-i18n="navEnt">ЕНТ</a>
+        <a href="#parents" data-i18n="navParents">Успеваемость</a>
+        <a href="#analytics" data-i18n="navAnalytics">Аналитика</a>
       </nav>
 
       <div class="language-box">
-        <span>Язык объяснения</span>
+        <span data-i18n="answerLanguage">Язык ответа</span>
         <div class="segmented" role="group" aria-label="Выбор языка">
           <button class="lang-btn active" data-lang="ru">RU</button>
           <button class="lang-btn" data-lang="kk">KZ</button>
           <button class="lang-btn" data-lang="en">EN</button>
         </div>
+        <label class="setting-toggle">
+          <input id="animationToggle" type="checkbox" checked />
+          <span data-i18n="animations">Анимации</span>
+        </label>
+        <label class="setting-toggle">
+          <input id="soundToggle" type="checkbox" checked />
+          <span data-i18n="sound">Звук</span>
+        </label>
+        <label class="setting-toggle">
+          <input id="reducedMotionToggle" type="checkbox" />
+          <span data-i18n="reducedMotion">Уменьшить движение</span>
+        </label>
+        <label class="setting-toggle">
+          <input id="dailyThemeToggle" type="checkbox" checked />
+          <span data-i18n="dailyThemeToggle">Тема дня</span>
+        </label>
       </div>
     </aside>
 
     <main class="workspace">
       <section class="topbar">
         <div>
-          <p class="eyebrow">AI-компаньон по школьной программе</p>
-          <h1>Mama AI помогает понять тему, а не просто списать ответ</h1>
+          <p class="eyebrow" data-i18n="schoolCompanion">AI-компаньон по школьной программе</p>
+          <h1 data-i18n="appTitle">Mama AI — школьный помощник для 1–11 классов</h1>
+        </div>
+        <div class="date-card" aria-live="polite">
+          <span class="date-card-label" data-i18n="kazakhstanTime">Время Казахстана</span>
+          <strong id="currentDateText">Пятница, 10 июля 2026</strong>
+          <span id="currentTimeText">22:15, Алматы</span>
+          <button class="ghost-btn quiet-sound-btn" id="natureSoundBtn" type="button" data-i18n="natureSound">Тихий звук темы</button>
+        </div>
+        <div class="mascot-stage" aria-label="Персонаж Mama AI">
+          <div class="mascot-bubble" data-i18n="mascotHello">Привет! Я помогу разобраться 🌟</div>
+          <div class="mama-mascot" id="mamaMascot" role="img" aria-label="Оригинальный мультяшный персонаж Mama AI">
+            <div class="mascot-hair"></div>
+            <div class="mascot-face">
+              <span class="mascot-eye left"></span>
+              <span class="mascot-eye right"></span>
+              <span class="mascot-cheek left"></span>
+              <span class="mascot-cheek right"></span>
+              <span class="mascot-smile"></span>
+            </div>
+            <div class="mascot-body">
+              <span class="mascot-badge">AI</span>
+            </div>
+            <div class="mascot-arm left"></div>
+            <div class="mascot-arm right"></div>
+          </div>
         </div>
         <div class="score-strip" aria-label="Игровой прогресс">
-          <div><strong id="points">120</strong><span>баллов</span></div>
-          <div><strong id="streak">5</strong><span>дней подряд</span></div>
-          <div><strong id="level">3</strong><span>уровень</span></div>
+          <div><strong id="points">120</strong><span data-i18n="points">баллов</span></div>
+          <div><strong id="streak">5</strong><span data-i18n="streak">дней подряд</span></div>
+          <div><strong id="level">3</strong><span data-i18n="level">уровень</span></div>
         </div>
       </section>
 
-      <section class="subject-grid" id="learn" aria-label="Предметы">
-        <button class="subject-card active" data-subject="math">
-          <span class="subject-icon">∑</span>
-          <strong>Математика</strong>
-          <small>Дроби, пропорции, задачи</small>
-        </button>
-        <button class="subject-card" data-subject="english">
-          <span class="subject-icon">Aa</span>
-          <strong>Английский</strong>
-          <small>Past Simple, слова, перевод</small>
-        </button>
-        <button class="subject-card" data-subject="science">
-          <span class="subject-icon">◎</span>
-          <strong>Естествознание</strong>
-          <small>Клетка, вещества, природа</small>
-        </button>
-        <button class="subject-card" data-subject="kazakh">
-          <span class="subject-icon">Қ</span>
-          <strong>Казахский язык</strong>
-          <small>Слова, предложения, перевод</small>
-        </button>
-        <button class="subject-card" data-subject="kazakhLiterature">
-          <span class="subject-icon">Ә</span>
-          <strong>Казахская литература</strong>
-          <small>Автор, идея, образ героя</small>
-        </button>
-        <button class="subject-card" data-subject="russian">
-          <span class="subject-icon">Р</span>
-          <strong>Русский язык</strong>
-          <small>Части речи, текст, орфография</small>
-        </button>
-        <button class="subject-card" data-subject="russianLiterature">
-          <span class="subject-icon">К</span>
-          <strong>Русская литература</strong>
-          <small>Сюжет, тема, анализ</small>
-        </button>
-        <button class="subject-card" data-subject="kazakhstanHistory">
-          <span class="subject-icon">Т</span>
-          <strong>История Казахстана</strong>
-          <small>Средние века, тюрки, ханства</small>
-        </button>
-        <button class="subject-card" data-subject="worldHistory">
-          <span class="subject-icon">W</span>
-          <strong>Всемирная история</strong>
-          <small>Средневековый мир</small>
-        </button>
-        <button class="subject-card" data-subject="geography">
-          <span class="subject-icon">G</span>
-          <strong>География</strong>
-          <small>Карта, климат, материки</small>
-        </button>
-        <button class="subject-card" data-subject="informatics">
-          <span class="subject-icon">{}</span>
-          <strong>Информатика</strong>
-          <small>Алгоритмы, данные, безопасность</small>
-        </button>
-        <button class="subject-card" data-subject="art">
-          <span class="subject-icon">A</span>
-          <strong>Художественный труд</strong>
-          <small>Материалы, композиция, проект</small>
-        </button>
-        <button class="subject-card" data-subject="sor">
-          <span class="subject-icon">✓</span>
-          <strong>Подготовка к СОР</strong>
-          <small>Повторение и тренировка</small>
-        </button>
-        <button class="subject-card" data-subject="soch">
-          <span class="subject-icon">★</span>
-          <strong>Подготовка к СОЧ</strong>
-          <small>План, темы, пробный тест</small>
-        </button>
+      <section class="profile-panel" id="profile">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow" data-i18n="studentProfile">Профиль ученика</p>
+            <h2 data-i18n="chooseGradeMode">Выберите класс и режим работы</h2>
+          </div>
+          <button class="ghost-btn" id="logoutBtn" data-i18n="logout">Выйти</button>
+        </div>
+        <div class="control-grid">
+          <label>
+            <span data-i18n="student">Ученик</span>
+            <input id="studentName" type="text" value="Аружан" />
+          </label>
+          <label>
+            <span>Город</span>
+            <input id="studentCity" type="text" value="Алматы" placeholder="Например: Алматы" />
+          </label>
+          <label>
+            <span>Email</span>
+            <input id="userEmail" type="email" value="gulmirau1979@gmail.com" placeholder="name@example.com" />
+          </label>
+          <label>
+            <span>Вход</span>
+            <select id="authProviderSelect" aria-label="Способ входа">
+              <option value="email">Email</option>
+              <option value="google">Google</option>
+              <option value="phone_no_sms">Телефон без SMS</option>
+            </select>
+          </label>
+          <label>
+            <span data-i18n="interfaceLanguage">Язык интерфейса</span>
+            <select id="interfaceLanguageSelect" aria-label="Язык интерфейса">
+              <option value="ru">Русский</option>
+              <option value="kk">Қазақша</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <label>
+            <span data-i18n="learningLanguage">Язык обучения в школе</span>
+            <select id="learningLanguageSelect" aria-label="Язык обучения в школе">
+              <option value="ru">Русский</option>
+              <option value="kk">Қазақша</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <label>
+            <span data-i18n="role">Роль</span>
+            <select id="roleSelect" aria-label="Роль пользователя">
+              <option value="student" data-i18n="roleStudent">Ученик</option>
+              <option value="parent" data-i18n="roleParent">Родитель</option>
+              <option value="teacher" data-i18n="roleTeacher">Учитель</option>
+              <option value="admin" data-i18n="roleAdmin">Администратор</option>
+            </select>
+          </label>
+          <label>
+            <span data-i18n="grade">Класс</span>
+            <select id="gradeSelect" aria-label="Выбор класса"></select>
+          </label>
+          <label>
+            <span data-i18n="mode">Режим</span>
+            <select id="modeSelect" aria-label="Режим обучения">
+              <option value="school" data-i18n="modeSchool">Школьная программа</option>
+              <option value="sor" data-i18n="modeSor">Подготовка к СОР</option>
+              <option value="soch" data-i18n="modeSoch">Подготовка к СОЧ</option>
+              <option value="unt" data-i18n="modeUnt">Подготовка к ЕНТ</option>
+            </select>
+          </label>
+          <label>
+            <span data-i18n="gradeSource">Источник оценок</span>
+            <select id="gradeSource">
+              <option data-i18n="sourceDemo">Демо-данные</option>
+              <option data-i18n="sourceJournal">Электронный журнал</option>
+              <option data-i18n="sourceSheets">Excel/Google Sheets</option>
+            </select>
+          </label>
+        </div>
+        <p class="system-note" id="profileNote">Проверяем подключение к серверу...</p>
+      </section>
+
+      <section class="account-panel" id="account">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Личный кабинет</p>
+            <h2>Ученик, родитель и облако</h2>
+          </div>
+          <span class="pill" id="cloudStatusPill">local</span>
+        </div>
+        <div class="account-grid">
+          <article>
+            <strong>Кабинет ученика</strong>
+            <p id="studentCabinetText">Профиль готовится...</p>
+          </article>
+          <article>
+            <strong>Кабинет родителя</strong>
+            <p id="parentCabinetText">Родитель увидит темы, слабые места и рекомендации.</p>
+          </article>
+          <article>
+            <strong>Облачный backend</strong>
+            <p id="cloudBackendText">Сейчас локальный режим. Для общей базы нужен облачный провайдер.</p>
+          </article>
+          <article>
+            <strong>Авторизация</strong>
+            <p id="authStatusText">Supabase Auth будет подключён после добавления ключей.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="subject-grid" id="learn" aria-label="Предметы"></section>
+
+      <section class="materials-panel" id="textbooks">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow" data-i18n="textbooksProgram">Учебники и программа</p>
+            <h2 id="materialsTitle">Материалы предмета</h2>
+          </div>
+          <span class="pill" id="materialsGrade">1–11 классы</span>
+        </div>
+        <div class="materials-grid">
+          <div>
+            <h3 data-i18n="subjectTopics">Темы предмета</h3>
+            <ul class="material-list" id="topicList"></ul>
+          </div>
+          <div>
+            <h3 data-i18n="materials">Материалы</h3>
+            <ul class="material-list" id="resourceList"></ul>
+          </div>
+          <div>
+            <h3 data-i18n="sorSoch">СОР и СОЧ</h3>
+            <ul class="material-list" id="assessmentList"></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="knowledge-panel" id="knowledge">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow" data-i18n="knowledgeBase">База знаний</p>
+            <h2 data-i18n="kbSearchTitle">Поиск по официальным материалам</h2>
+          </div>
+          <span class="pill" id="kbStatusPill">awaiting_import</span>
+        </div>
+        <form class="kb-search" id="kbSearchForm">
+          <label>
+            <span data-i18n="kbKeyword">Ключевое слово</span>
+            <input id="kbKeyword" type="search" placeholder="topic, lesson, page" />
+          </label>
+          <label>
+            <span data-i18n="kbQuarter">Четверть</span>
+            <select id="kbQuarter">
+              <option value="" data-i18n="kbAnyQuarter">Любая</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+            </select>
+          </label>
+          <button type="submit" data-i18n="kbSearchButton">Найти</button>
+        </form>
+        <div class="kb-results" id="kbResults" aria-live="polite">
+          <p data-i18n="kbAwaiting">Официальные материалы еще ожидают импорт.</p>
+        </div>
       </section>
 
       <section class="learning-layout">
-        <div class="assistant-panel" id="homework">
+        <div class="assistant-panel" id="assistant">
           <div class="panel-heading">
             <div>
-              <p class="eyebrow">Пошаговое объяснение</p>
+              <p class="eyebrow" data-i18n="stepExplanation">Пошаговое объяснение</p>
               <h2 id="chatTitle">Математика</h2>
             </div>
-            <button class="ghost-btn" id="hintBtn">Подсказка</button>
+            <div class="assistant-actions">
+              <button class="ghost-btn" id="hintBtn" type="button" data-i18n="hint">Подсказка</button>
+              <button class="ghost-btn" id="speakBtn" type="button" data-i18n="speakAnswer">🔊 Озвучить ответ</button>
+              <button class="ghost-btn" id="voiceBtn" type="button" data-i18n="voiceInput">🎤 Сказать голосом</button>
+            </div>
           </div>
 
           <div class="chat" id="chat" aria-live="polite">
             <div class="message bot">
-              Привет! Я объясню тему маленькими шагами. Выбери предмет или напиши задание, а я помогу разобраться без готового списывания.
+              <span data-i18n="chatWelcome">Привет! Выберите класс и предмет. Я объясню тему маленькими шагами, помогу с домашним заданием, СОР/СОЧ или подготовкой к ЕНТ.</span>
             </div>
           </div>
 
           <form class="input-row" id="chatForm">
-            <input id="userInput" type="text" autocomplete="off" placeholder="Например: объясни пропорции простыми словами" />
-            <button type="submit">Отправить</button>
+            <input id="userInput" type="text" autocomplete="off" placeholder="Например: объясни проценты для моего класса" data-i18n-placeholder="inputPlaceholder" />
+            <button type="submit" data-i18n="send">Отправить</button>
           </form>
+          <p class="voice-status" id="voiceStatus" aria-live="polite"></p>
         </div>
 
         <div class="side-stack">
           <section class="photo-tool">
             <div class="panel-heading compact">
               <div>
-                <p class="eyebrow">Фото задания</p>
-                <h2>Разбор страницы</h2>
+                <p class="eyebrow" data-i18n="photoTask">Фото задания</p>
+                <h2 data-i18n="pageAnalysis">Разбор страницы</h2>
               </div>
             </div>
             <label class="upload-zone" for="photoInput">
               <input id="photoInput" type="file" accept="image/*" />
               <span class="upload-icon">+</span>
-              <strong>Добавить фото</strong>
-              <small>Прототип распознавания учебника или тетради</small>
+              <strong data-i18n="addPhoto">Добавить фото</strong>
+              <small data-i18n="photoSmall">Учебник, тетрадь, задание или контрольная</small>
             </label>
-            <p class="photo-status" id="photoStatus">После загрузки Mama AI предложит разобрать условие по шагам.</p>
+            <p class="photo-status" id="photoStatus" data-i18n="photoStatus">После загрузки Mama AI предложит разобрать условие по шагам.</p>
           </section>
 
           <section class="daily-plan">
             <div class="panel-heading compact">
               <div>
-                <p class="eyebrow">План на сегодня</p>
-                <h2>25 минут</h2>
+                <p class="eyebrow" data-i18n="todayPlan">План на сегодня</p>
+                <h2 id="planTime">25 минут</h2>
               </div>
             </div>
-            <ul class="task-list">
-              <li><input type="checkbox" checked /> Повторить пропорции</li>
-              <li><input type="checkbox" /> Сделать 5 задач без спешки</li>
-              <li><input type="checkbox" /> Пройти мини-тест</li>
-            </ul>
+            <ul class="task-list" id="dailyPlan"></ul>
           </section>
         </div>
       </section>
 
       <section class="bottom-grid">
-        <div class="quiz-panel" id="quiz">
+        <div class="quiz-panel" id="test">
           <div class="panel-heading">
             <div>
-              <p class="eyebrow">Мини-тест после урока</p>
-              <h2>Проверь понимание</h2>
+              <p class="eyebrow" data-i18n="trainingEnt">Тренировка и ЕНТ</p>
+              <h2 id="quizTitle" data-i18n="checkUnderstanding">Проверь понимание</h2>
             </div>
             <span class="pill" id="quizReward">+10 баллов</span>
           </div>
-          <p class="question" id="quizQuestion">Что такое пропорция?</p>
-          <div class="answer-grid" id="answerGrid">
-            <button data-correct="false">Любое сложение двух чисел</button>
-            <button data-correct="true">Равенство двух отношений</button>
-            <button data-correct="false">Только деление на 10</button>
-          </div>
+          <p class="question" id="quizQuestion"></p>
+          <div class="answer-grid" id="answerGrid"></div>
+          <div class="praise-pop" id="praisePop" aria-live="polite"></div>
           <p class="result" id="quizResult"></p>
         </div>
 
         <div class="parent-panel" id="parents">
           <div class="panel-heading">
             <div>
-              <p class="eyebrow">Панель родителя</p>
-              <h2>Прогресс ребенка</h2>
+              <p class="eyebrow" data-i18n="progress">Успеваемость</p>
+              <h2 id="progressTitle" data-i18n="studentProgress">Прогресс ученика</h2>
             </div>
           </div>
-          <div class="progress-row">
-            <span>Математика</span>
-            <div class="bar"><i style="width: 76%"></i></div>
-            <strong>76%</strong>
+          <div id="progressRows"></div>
+          <p class="parent-note" id="parentNote"></p>
+        </div>
+      </section>
+
+      <section class="advanced-grid" id="smartPlan">
+        <div class="learning-plan-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">План занятий</p>
+              <h2>Недельный маршрут</h2>
+            </div>
+            <button class="ghost-btn" id="generatePlanBtn" type="button">Составить план</button>
           </div>
-          <div class="progress-row">
-            <span>Английский</span>
-            <div class="bar"><i style="width: 62%"></i></div>
-            <strong>62%</strong>
+          <ul class="task-list" id="weeklyPlanList"></ul>
+        </div>
+
+        <div class="trainer-panel" id="giaTrainer">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Тренажёр</p>
+              <h2>ГИА / ЕНТ без выдуманных официальных заданий</h2>
+            </div>
+            <select id="trainerModeSelect" aria-label="Режим тренажёра">
+              <option value="gia">ГИА</option>
+              <option value="ent">ЕНТ</option>
+              <option value="weak">Слабые темы</option>
+            </select>
           </div>
-          <div class="progress-row">
-            <span>Естествознание</span>
-            <div class="bar"><i style="width: 54%"></i></div>
-            <strong>54%</strong>
+          <p class="question" id="trainerQuestion"></p>
+          <div class="answer-grid" id="trainerAnswers"></div>
+          <p class="result" id="trainerResult"></p>
+          <button class="ghost-btn" id="nextTrainerBtn" type="button">Следующий вопрос</button>
+        </div>
+      </section>
+
+      <section class="parent-insight-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Родительский анализ</p>
+            <h2>Что изучает ребёнок и где нужна помощь</h2>
           </div>
-          <p class="parent-note">Сегодня ребенок чаще ошибался в пропорциях. Рекомендуем короткое повторение и 3 похожие задачи.</p>
+        </div>
+        <div class="insight-grid">
+          <article>
+            <strong>Текущая тема</strong>
+            <p id="currentTopicInsight">Выберите предмет.</p>
+          </article>
+          <article>
+            <strong>Слабые темы</strong>
+            <ul id="weakTopicsList"></ul>
+          </article>
+          <article>
+            <strong>Рекомендации</strong>
+            <ul id="recommendationList"></ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="analytics-panel" id="analytics">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow" data-i18n="adminPanel">Панель администратора</p>
+            <h2 data-i18n="siteAnalytics">Аналитика сайта и полезности</h2>
+          </div>
+          <button class="ghost-btn" id="exportAnalyticsBtn" data-i18n="exportCsv">Экспорт CSV</button>
+        </div>
+        <div class="metric-grid">
+          <div><strong id="visitsMetric">0</strong><span data-i18n="visits">заходов</span></div>
+          <div><strong id="usersMetric">0</strong><span data-i18n="students">учеников</span></div>
+          <div><strong id="citiesMetric">0</strong><span>городов</span></div>
+          <div><strong id="questionsMetric">0</strong><span data-i18n="questions">вопросов</span></div>
+          <div><strong id="correctMetric">0%</strong><span data-i18n="correctAnswers">верных ответов</span></div>
+          <div><strong id="helpfulMetric">0</strong><span data-i18n="helpfulFeedback">полезных отзывов</span></div>
+          <div><strong id="wrongMetric">0</strong><span data-i18n="wrongAnswers">ошибок в тестах</span></div>
+        </div>
+        <div class="admin-grid">
+          <div>
+            <h3 data-i18n="latestActions">Последние действия</h3>
+            <ul class="event-list" id="eventList"></ul>
+          </div>
+          <div>
+            <h3>Города</h3>
+            <ul class="event-list city-list" id="cityAnalyticsList"></ul>
+          </div>
+          <div class="admin-only-box" id="adminAccessBox">
+            <h3>Админ-доступ</h3>
+            <p id="adminAccessText">Только владелец видит полную таблицу учеников.</p>
+          </div>
+          <div class="student-table-box">
+            <h3>Ученики по городам и классам</h3>
+            <div class="table-scroll">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Ученик</th>
+                    <th>Класс</th>
+                    <th>Город</th>
+                    <th>Активность</th>
+                    <th>Статус</th>
+                  </tr>
+                </thead>
+                <tbody id="adminStudentRows"></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <h3>Давно не заходили</h3>
+            <ul class="event-list" id="inactiveStudentList"></ul>
+          </div>
+          <form class="feedback-box" id="feedbackForm">
+            <h3 data-i18n="studentFeedback">Отзыв ученика</h3>
+            <textarea id="feedbackText" placeholder="Что было полезно? Где было сложно?" data-i18n-placeholder="feedbackPlaceholder"></textarea>
+            <div class="feedback-actions">
+              <button type="button" class="ghost-btn" data-helpful="yes" data-i18n="helpful">Полезно</button>
+              <button type="button" class="ghost-btn" data-helpful="no" data-i18n="improve">Нужно улучшить</button>
+            </div>
+          </form>
+          <form class="feedback-box" id="gradeImportForm">
+            <h3 data-i18n="gradeImport">Импорт оценок</h3>
+            <textarea id="gradesJson" placeholder='[{"subject":"Математика","value":5,"type":"СОР","date":"2026-07-10"}]'></textarea>
+            <div class="feedback-actions single">
+              <button type="submit" class="ghost-btn" data-i18n="uploadGrades">Загрузить оценки</button>
+            </div>
+          </form>
+          <div class="feedback-box lifecycle-box">
+            <h3>Неактивные аккаунты</h3>
+            <p id="lifecyclePolicy">Проверка: 30 дней без входа, затем предупреждение и 3 дня ожидания.</p>
+            <div class="feedback-actions single">
+              <button type="button" class="ghost-btn" id="runLifecycleBtn">Проверить сейчас</button>
+            </div>
+            <ul class="event-list lifecycle-list" id="lifecycleList"></ul>
+            <p class="parent-note" id="lifecycleEmailStatus"></p>
+          </div>
         </div>
       </section>
     </main>
   </div>
+  <div class="confetti-layer" id="confettiLayer" aria-hidden="true"></div>
 
+  <script src="i18n.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
