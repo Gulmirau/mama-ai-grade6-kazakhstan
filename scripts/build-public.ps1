@@ -15,7 +15,8 @@ Copy-Item -LiteralPath `
   (Join-Path $projectRoot "index.html"), `
   (Join-Path $projectRoot "style.css"), `
   (Join-Path $projectRoot "script.js"), `
-  (Join-Path $projectRoot "i18n.js") `
+  (Join-Path $projectRoot "i18n.js"), `
+  (Join-Path $projectRoot "official_textbooks.js") `
   -Destination $publicDir -Force
 
 Set-Content -LiteralPath (Join-Path $publicDir "README_PUBLIC.txt") -Encoding UTF8 -Value @"

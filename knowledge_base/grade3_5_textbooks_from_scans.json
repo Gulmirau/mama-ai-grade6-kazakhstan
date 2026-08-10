@@ -1,0 +1,169 @@
+{
+  "note": "Textbook, workbook, atlas, and map metadata created from user-provided photos and PDF scans on 2026-07-20. PDF files have no text layer and must stay uploaded_awaiting_ocr until OCR and human review are completed.",
+  "fileType": "json",
+  "originalName": "grade3_5_textbooks_from_user_scans_2026-07-20.json",
+  "sourceType": "textbook_catalog",
+  "sourceUrl": "user_photos_and_pdf_scans",
+  "license": "metadata_only_no_full_text",
+  "academicYear": "2026-2027",
+  "language": "ru",
+  "records": [
+    {
+      "entityType": "textbook",
+      "id": "tb_grade5_ru_math_trainer_znavka_2025",
+      "title": "Математика. 5 класс. Тренажеры",
+      "publisher": "НВЦ «Образовательный технопарк»",
+      "grade": 5,
+      "language": "ru",
+      "subject": "math",
+      "subjectTitle": "Математика",
+      "authors": [],
+      "edition": "2025",
+      "downloadableResource": "uploaded_awaiting_ocr",
+      "sourceReferences": [
+        "user_photo: WhatsApp Image 2026-07-20 at 13.59.34.jpeg",
+        "user_scan: Whatsapp Scan 19 июля 2026 г. at 11.22.55.pdf",
+        "https://znavka.kz"
+      ],
+      "status": "uploaded_awaiting_ocr"
+    },
+    {
+      "entityType": "textbook",
+      "id": "tb_grade5_ru_math_osudy_znavka_2025",
+      "title": "Математика. 5 класс. Осыды. Обобщенные способы учебной деятельности (в схемах)",
+      "publisher": "НВЦ «Образовательный технопарк»",
+      "grade": 5,
+      "language": "ru",
+      "subject": "math",
+      "subjectTitle": "Математика",
+      "authors": [],
+      "edition": "2025",
+      "downloadableResource": "uploaded_awaiting_ocr",
+      "sourceReferences": [
+        "user_photo: WhatsApp Image 2026-07-20 at 13.59.34.jpeg",
+        "https://znavka.kz"
+      ],
+      "status": "uploaded_awaiting_ocr"
+    },
+    {
+      "entityType": "workbook",
+      "id": "wb_grade5_en_excel_kazakhstan_express",
+      "title": "Excel for Kazakhstan. Grade 5. Workbook & Grammar Book",
+      "publisher": "Express Publishing",
+      "grade": 5,
+      "language": "en",
+      "subject": "english",
+      "subjectTitle": "Английский язык",
+      "authors": ["Virginia Evans", "Jenny Dooley", "Bob Obee"],
+      "edition": "awaiting_review",
+      "isbn": "978-1-4715-5777-4",
+      "downloadableResource": "uploaded_awaiting_ocr",
+      "sourceReferences": [
+        "user_photo: WhatsApp Image 2026-07-20 at 13.59.35.jpeg",
+        "user_photo: WhatsApp Image 2026-07-20 at 13.59.35 (1).jpeg"
+      ],
+      "status": "uploaded_awaiting_ocr"
+    },
+    {
+      "entityType": "textbook",
+      "id": "tb_grade3_ru_world_knowledge_atamura_2018",
+      "title": "Познание мира. Учебник для 3 класса общеобразовательной школы",
+      "publisher": "Атамұра",
+      "grade": 3,
+      "language": "ru",
+      "subject": "world_knowledge",
+      "subjectTitle": "Познание мира",
+      "authors": ["Б. К. Турмашева", "С. С. Салыш", "В. Г. Путан"],
+      "edition": "2018",
+      "downloadableResource": "uploaded_awaiting_ocr",
+      "sourceReferences": [
+        "user_photo: WhatsApp Image 2026-07-20 at 13.59.35 (2).jpeg"
+      ],
+      "status": "uploaded_awaiting_ocr"
+    },
+    {
+      "entityType": "atlas",
+      "id": "atlas_grade5_ru_science_contour_maps",
+      "title": "Естествознание. 5 класс. Контурные карты",
+      "publisher": "awaiting_review",
+      "grade": 5,
+      "language": "ru",
+      "subject": "science",
+      "subjectTitle": "Естествознание",
+      "edition": "awaiting_review",
+      "downloadableResource": "uploaded_awaiting_ocr",
+      "sourceReferences": [
+        "user_scan: 1Whatsapp Scan 19 июля 2026 г. at 11.22.04.pdf",
+        "user_scan: 2Whatsapp Scan 19 июля 2026 г. at 11.22.04.pdf",
+        "user_scan: Whatsapp Scan 19 июля 2026 г. at 11.22.04.pdf"
+      ],
+      "status": "uploaded_awaiting_ocr"
+    },
+    {
+      "entityType": "atlas",
+      "id": "atlas_grade5_ru_history_kz_ancient_kazakhstan",
+      "title": "История древнего Казахстана. 5 класс. Атлас",
+      "publisher": "awaiting_review",
+      "grade": 5,
+      "language": "ru",
+      "subject": "history_kz",
+      "subjectTitle": "История Казахстана",
+      "edition": "awaiting_review",
+      "downloadableResource": "uploaded_awaiting_ocr",
+      "sourceReferences": [
+        "user_scan: Whatsapp Scan 19 июля 2026 г. at 11.18.44.pdf"
+      ],
+      "status": "uploaded_awaiting_ocr"
+    },
+    {
+      "entityType": "atlas",
+      "id": "atlas_grade5_ru_history_kz_contour_maps",
+      "title": "История древнего Казахстана. 5 класс. Контурные карты",
+      "publisher": "awaiting_review",
+      "grade": 5,
+      "language": "ru",
+      "subject": "history_kz",
+      "subjectTitle": "История Казахстана",
+      "edition": "awaiting_review",
+      "downloadableResource": "uploaded_awaiting_ocr",
+      "sourceReferences": [
+        "user_scan: Whatsapp Scan 19 июля 2026 г. at 11.19.19.pdf",
+        "user_scan: Whatsapp Scan 19 июля 2026 г. at 11.19.35.pdf"
+      ],
+      "status": "uploaded_awaiting_ocr"
+    },
+    {
+      "entityType": "atlas",
+      "id": "atlas_grade5_ru_world_history_ancient_world",
+      "title": "История древнего мира. 5 класс. Атлас",
+      "publisher": "awaiting_review",
+      "grade": 5,
+      "language": "ru",
+      "subject": "world_history",
+      "subjectTitle": "Всемирная история",
+      "edition": "awaiting_review",
+      "downloadableResource": "uploaded_awaiting_ocr",
+      "sourceReferences": [
+        "user_scan: Whatsapp Scan 19 июля 2026 г. at 11.21.18.pdf"
+      ],
+      "status": "uploaded_awaiting_ocr"
+    },
+    {
+      "entityType": "atlas",
+      "id": "atlas_grade5_ru_world_history_contour_maps",
+      "title": "История древнего мира. 5 класс. Контурные карты",
+      "publisher": "awaiting_review",
+      "grade": 5,
+      "language": "ru",
+      "subject": "world_history",
+      "subjectTitle": "Всемирная история",
+      "edition": "awaiting_review",
+      "downloadableResource": "uploaded_awaiting_ocr",
+      "sourceReferences": [
+        "user_scan: Whatsapp Scan 19 июля 2026 г. at 11.20.11.pdf",
+        "user_scan: Whatsapp Scan 19 июля 2026 г. at 11.20.49.pdf"
+      ],
+      "status": "uploaded_awaiting_ocr"
+    }
+  ]
+}

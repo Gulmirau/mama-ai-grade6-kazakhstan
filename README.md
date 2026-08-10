@@ -1,4 +1,10 @@
-# Knowledge Base: official educational materials
+# Mama AI — школьный помощник для 1–11 классов Казахстана
+
+Mama AI is a school helper prototype for Kazakhstan grades 1-11. The app now includes grade-specific subject lists and an official textbook metadata catalog extracted from the Kazakhstan Ministry of Enlightenment gov.kz page.
+
+This project is still not a full production platform: AI tutoring, OCR, RAG, cloud database, authentication, progress, SOR/SOCH, and ENT are either demo or partial unless configured with real services and reviewed educational materials. See `PROJECT_STATUS.md`.
+
+## Knowledge Base: official educational materials
 
 Mama AI now has the backend architecture for a real Knowledge Base. The project does not include fictional official Kazakhstan curriculum, textbook, SOR, SOCH, or UNT content. Missing records are marked as `awaiting_import`.
 
@@ -9,6 +15,16 @@ Files:
 - `knowledge_base/schema.sql` - normalized database schema for production storage.
 - `knowledge_base/IMPORT_WORKFLOW.md` - import and review workflow.
 - `knowledge_base/import_record_template.json` - JSON import template.
+- `knowledge_base/gov_kz_textbooks_1_11_official.json` - 288 official textbook metadata/link records extracted from gov.kz for grades 1-11.
+- `official_textbooks.js` - static-browser version of the official catalog for GitHub Pages.
+- `knowledge_base/grade6_textbooks_from_photos.json` - catalog records created from the user's Grade 6 textbook photos and checked against publisher/official references where available. These are metadata records only, not full textbook content.
+- `knowledge_base/grade3_5_textbooks_from_scans.json` - catalog records created from the user's Grade 3 and Grade 5 photos/PDF scans. PDF scans currently have no text layer and are marked `uploaded_awaiting_ocr`.
+- `reports/content-coverage.md` - coverage report by grade and subject.
+- `reports/textbooks-update-report.md` - diff report for checking whether gov.kz changed.
+- `reports/repository-audit.md` - audit of what was in Git and what was only local.
+- `scripts/extract-gov-kz-textbooks.py` - importer for the official gov.kz textbook page.
+- `scripts/update_textbooks_catalog.py` - update checker that creates a diff report without overwriting reviewed data.
+- `scripts/content-audit.js` - content coverage and regression tests for grades 1-11.
 - `data/knowledge_base.json` - local runtime Knowledge Base created by the Node server.
 - `data/imports/` - folder reserved for imported source files.
 
@@ -46,10 +62,6 @@ The trainer does not include official GIA / ENT materials yet. It uses demo ques
 
 Real warning emails require an email provider. Until `EMAIL_PROVIDER` and sender settings are configured, warnings are saved in the local `notifications` queue and shown in the admin panel.
 
-# Mama AI
-
-Фронтенд + backend-прототип учебной платформы Mama AI — школьного помощника для 1–11 классов по программе Казахстана.
-
 ## Быстрый запуск
 
 Вариант без сервера:
@@ -63,6 +75,20 @@ Real warning emails require an email provider. Until `EMAIL_PROVIDER` and sender
 1. Откройте терминал в папке `mama_ai_app`.
 2. Запустите `npm start`.
 3. Откройте `http://localhost:3000`.
+
+## Проверки
+
+```bash
+npm run check
+npm run content:test
+npm run content:report
+```
+
+To check whether the official gov.kz textbook page changed:
+
+```bash
+python scripts/update_textbooks_catalog.py
+```
 
 ## Подключение AI API
 
@@ -82,7 +108,9 @@ Real warning emails require an email provider. Until `EMAIL_PROVIDER` and sender
 - Структура `curriculumData` для каждого класса: `grade`, `subjects`, `topics`, `textbookLinks`, `sorTopics`, `sochTopics`.
 - Автоматический список предметов строго под выбранный класс.
 - Раздел "Учебники": темы предмета, учебник, рабочая тетрадь, СОР, СОЧ и мини-тест.
-- Заглушки для будущих материалов: "Учебники будут подключены позже" и "Материалы по программе РК будут добавлены в базу знаний".
+- Для 6 класса добавлен первый каталог реальных учебников по фото пользователя: информатика, всемирная история, естествознание, русский язык, русская литература, музыка, английский язык и художественный труд.
+- Для 3 и 5 классов добавлены первые ресурсы по фото/сканам пользователя: познание мира 3 класс, математика 5 класс, английский workbook 5 класс, атласы и контурные карты 5 класса.
+- Полные страницы учебников, СОР, СОЧ и рабочие тетради не копируются без официального источника или лицензии; такие материалы остаются со статусом `imported_needs_review` или `awaiting_official_source`.
 - Режимы: школьная программа, СОР, СОЧ, ЕНТ.
 - Оригинальный мультяшный персонаж Mama AI с приветственным взмахом и мягкой idle-анимацией.
 - Детский интерфейс: мягкие цвета, округлые карточки, декоративные книги, карандаши и звездочки.
@@ -115,12 +143,14 @@ Real warning emails require an email provider. Until `EMAIL_PROVIDER` and sender
 
 ## Поддержка классов и предметов
 
-Mama AI теперь поддерживает 1–11 классы. После выбора класса приложение показывает предметы именно для этого уровня:
+Mama AI теперь поддерживает 1–11 классы. После выбора класса приложение показывает расширенный стандартный набор предметов для Казахстана. Списки предметов подготовлены по структуре типовых учебных планов РК; точные часы, разделы, цели обучения и учебники должны импортироваться из официальных материалов.
 
-- 1–4 классы: математика, русский язык, казахский язык, английский язык, познание мира, литературное чтение.
-- 5–6 классы: математика, русский язык, казахский язык, английский язык, естествознание, история Казахстана, география, информатика.
-- 7–9 классы: алгебра, геометрия, физика, химия, биология, география, история Казахстана, всемирная история, русский язык, казахский язык, английский язык, информатика.
-- 10–11 классы: алгебра и начала анализа, геометрия, физика, химия, биология, география, история Казахстана, всемирная история, русский язык, казахский язык, английский язык, информатика, подготовка к ЕНТ.
+- 1 класс: обучение грамоте, математика, казахский язык, английский язык, познание мира, естествознание, художественный труд, музыка, физическая культура, цифровая грамотность.
+- 2–4 классы: русский язык, литературное чтение, казахский язык, английский язык, математика, познание мира, естествознание, художественный труд, музыка, физическая культура, цифровая грамотность.
+- 5–6 классы: русский язык, русская литература, казахский язык, казахская литература, английский язык, математика, естествознание, история Казахстана, всемирная история, география, информатика, художественный труд, музыка, физическая культура, глобальные компетенции.
+- 7–8 классы: языки и литература, алгебра, геометрия, информатика, физика, химия, биология, география, история Казахстана, всемирная история, художественный труд, физическая культура, глобальные компетенции.
+- 9 класс: предметы 7–8 классов плюс основы права.
+- 10–11 классы: обязательные и профильные предметы: алгебра и начала анализа, геометрия, информатика, языки и литература, история Казахстана, физическая культура, начальная военная и технологическая подготовка, физика, химия, биология, география, всемирная история, основы права, основы предпринимательства и бизнеса, графика и проектирование, глобальные компетенции, подготовка к ЕНТ.
 
 Выбранный класс сохраняется в `localStorage`, поэтому при следующем открытии приложение возвращается к последнему выбранному классу.
 

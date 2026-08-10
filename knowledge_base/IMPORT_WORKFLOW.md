@@ -25,6 +25,24 @@ All official educational records must be imported from verified materials and re
 8. AI search uses trusted Knowledge Base records first.
 9. If no verified records exist, AI must say materials are awaiting import and avoid inventing school facts.
 
+## User photo textbook catalog
+
+`grade6_textbooks_from_photos.json` contains metadata extracted from the user's photos of Grade 6 textbooks.
+
+These records are allowed for catalog display only:
+
+- title
+- publisher
+- grade
+- language
+- subject
+- authors
+- edition year
+- ISBN/page count when visible or verified
+- publisher or official reference link when found
+
+They do not contain full textbook pages and must stay `imported_needs_review` until a human reviewer approves the metadata. Full textbook content, workbook tasks, SOR, SOCH, and ENT questions must be imported only from official or licensed files.
+
 ## Search priority
 
 1. Official curriculum

@@ -9,6 +9,7 @@ const rootDir = __dirname;
 const dataDir = path.join(rootDir, "data");
 const dbPath = path.join(dataDir, "db.json");
 const kbPath = path.join(dataDir, "knowledge_base.json");
+const knowledgeBaseDir = path.join(rootDir, "knowledge_base");
 const importsDir = path.join(dataDir, "imports");
 const port = Number(process.env.PORT || 3000);
 const sessions = new Map();
@@ -214,7 +215,7 @@ async function routeApi(req, res, url) {
       grade: url.searchParams.get("grade") || "",
       subject: url.searchParams.get("subject") || "",
       quarter: url.searchParams.get("quarter") || "",
-      language: url.searchParams.get("language") || "ru"
+      language: url.searchParams.get("language") || ""
     };
     sendJson(res, 200, searchKnowledgeBase(kb, query));
     return;
@@ -544,7 +545,62 @@ function readKnowledgeBase() {
   if (!fs.existsSync(kbPath)) {
     ensureKnowledgeBase();
   }
-  return JSON.parse(fs.readFileSync(kbPath, "utf8"));
+  return mergeSeedKnowledgeBase(JSON.parse(fs.readFileSync(kbPath, "utf8")));
+}
+
+function mergeSeedKnowledgeBase(kb) {
+  if (!fs.existsSync(knowledgeBaseDir)) return kb;
+
+  try {
+    const seedFiles = fs.readdirSync(knowledgeBaseDir)
+      .filter((fileName) => /textbooks.*\.json$/i.test(fileName) || /from_(photos|scans).*\.json$/i.test(fileName));
+    const existingIds = new Set([
+      ...(kb.textbooks || []).map((item) => item.id),
+      ...(kb.workbooks || []).map((item) => item.id)
+    ]);
+
+    for (const fileName of seedFiles) {
+      const seedPath = path.join(knowledgeBaseDir, fileName);
+      const seed = JSON.parse(fs.readFileSync(seedPath, "utf8"));
+      const records = (seed.records || [])
+        .filter((record) => ["textbook", "workbook", "atlas"].includes(record.entityType) && !existingIds.has(record.id))
+        .map((record) => {
+          existingIds.add(record.id);
+          return {
+            id: record.id,
+            resourceType: record.entityType,
+            language: record.language || seed.language || "ru",
+            academicYear: record.academicYear || seed.academicYear || "2026-2027",
+            sourceFileId: fileName.replace(/\.json$/i, ""),
+            status: record.status || "imported_needs_review",
+            title: cleanText(record.title || ""),
+            publisher: cleanText(record.publisher || ""),
+            grade: record.grade || null,
+            subject: cleanText(record.subject || ""),
+            subjectTitle: cleanText(record.subjectTitle || ""),
+            authors: record.authors || [],
+            edition: cleanText(record.edition || ""),
+            isbn: cleanText(record.isbn || ""),
+            pagesCount: record.pagesCount || null,
+            materialType: cleanText(record.materialType || (record.entityType === "workbook" ? "workbook" : record.resourceType) || "main_textbook"),
+            chapters: [],
+            pages: [],
+            resource: cleanText(record.downloadableResource || ""),
+            sourceReferences: record.sourceReferences || []
+          };
+        });
+
+      const workbookRecords = records.filter((record) => record.resourceType === "workbook");
+      const textbookRecords = records.filter((record) => record.resourceType !== "workbook");
+
+      if (textbookRecords.length) kb.textbooks = [...(kb.textbooks || []), ...textbookRecords];
+      if (workbookRecords.length) kb.workbooks = [...(kb.workbooks || []), ...workbookRecords];
+    }
+  } catch (error) {
+    addEvent(readDb(), "KB seed error", error.message.slice(0, 160));
+  }
+
+  return kb;
 }
 
 function writeKnowledgeBase(kb) {
@@ -602,12 +658,13 @@ function searchKnowledgeBase(kb, query) {
     grade: cleanText(query.grade || ""),
     subject: cleanText(query.subject || "").toLowerCase(),
     quarter: cleanText(query.quarter || ""),
-    language: cleanText(query.language || "ru")
+    language: cleanText(query.language || "")
   };
 
   const collections = [
     ["official_curriculum", kb.curriculum, 1],
     ["textbooks", kb.textbooks, 2],
+    ["workbooks", kb.workbooks, 2],
     ["sor", kb.sor, 3],
     ["soch", kb.soch, 3],
     ["teacher_materials", kb.teacherMaterials, 4],
@@ -629,7 +686,7 @@ function searchKnowledgeBase(kb, query) {
       const matchesGrade = !normalized.grade || text.includes(`grade_${normalized.grade}`) || text.includes(`"grade":${normalized.grade}`) || text.includes(`"grade":"${normalized.grade}"`);
       const matchesSubject = !normalized.subject || text.includes(normalized.subject);
       const matchesQuarter = !normalized.quarter || text.includes(`quarter_${normalized.quarter}`) || text.includes(`"quarter":${normalized.quarter}`);
-      const matchesLanguage = !record.language || record.language === normalized.language || text.includes(`"language":"${normalized.language}"`);
+      const matchesLanguage = !normalized.language || !record.language || record.language === normalized.language || text.includes(`"language":"${normalized.language}"`);
 
       if (matchesKeyword && matchesTopic && matchesLesson && matchesTextbook && matchesPage && matchesGrade && matchesSubject && matchesQuarter && matchesLanguage) {
         results.push({ source, priority, record });

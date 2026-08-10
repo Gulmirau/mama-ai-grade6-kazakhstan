@@ -6,7 +6,10 @@
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check script.js"
+    "check": "node --check server.js && node --check script.js && node --check official_textbooks.js && node --check scripts/content-audit.js && node --check scripts/static-public-check.js",
+    "content:report": "node scripts/content-audit.js report",
+    "content:test": "node scripts/content-audit.js test",
+    "public:test": "node scripts/static-public-check.js"
   },
   "engines": {
     "node": ">=18"

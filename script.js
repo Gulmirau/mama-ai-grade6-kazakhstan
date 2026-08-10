@@ -1,51 +1,339 @@
 const subjectMeta = {
+  "Обучение грамоте": { icon: "А", tags: "буквы, слоги, чтение" },
   "Математика": { icon: "∑", tags: "счет, задачи, величины" },
   "Русский язык": { icon: "Р", tags: "письмо, текст, грамматика" },
   "Казахский язык": { icon: "Қ", tags: "сөз, сөйлем, мәтін" },
+  "Казахская литература": { icon: "Ә", tags: "мәтін, шығарма, кейіпкер" },
   "Английский язык": { icon: "Aa", tags: "words, reading, grammar" },
   "Познание мира": { icon: "◎", tags: "семья, природа, общество" },
   "Литературное чтение": { icon: "К", tags: "чтение, герой, смысл" },
+  "Русская литература": { icon: "Л", tags: "чтение, текст, герои" },
   "Естествознание": { icon: "◎", tags: "природа, вещества, организм" },
   "История Казахстана": { icon: "Т", tags: "даты, личности, события" },
   "География": { icon: "G", tags: "карта, климат, страны" },
   "Информатика": { icon: "{}", tags: "алгоритмы, код, данные" },
+  "Цифровая грамотность": { icon: "01", tags: "компьютер, безопасность, навыки" },
+  "Музыка": { icon: "♪", tags: "ритм, жанры, культура" },
+  "Художественный труд": { icon: "✎", tags: "проект, материалы, творчество" },
+  "Физическая культура": { icon: "ФК", tags: "здоровье, игры, упражнения" },
   "Алгебра": { icon: "x", tags: "уравнения, функции, графики" },
   "Геометрия": { icon: "△", tags: "фигуры, теоремы, доказательства" },
   "Физика": { icon: "F", tags: "силы, энергия, электричество" },
   "Химия": { icon: "H", tags: "элементы, реакции, вещества" },
   "Биология": { icon: "Б", tags: "клетка, организм, генетика" },
   "Всемирная история": { icon: "W", tags: "эпохи, страны, события" },
+  "Основы права": { icon: "§", tags: "право, обязанности, общество" },
+  "Глобальные компетенции": { icon: "◎", tags: "безопасность, экология, коммуникация" },
+  "Начальная военная и технологическая подготовка": { icon: "НВ", tags: "безопасность, подготовка, технологии" },
+  "Основы предпринимательства и бизнеса": { icon: "₸", tags: "идея, рынок, деньги" },
+  "Графика и проектирование": { icon: "⌁", tags: "чертеж, проект, дизайн" },
   "Алгебра и начала анализа": { icon: "ƒ", tags: "функции, пределы, производная" },
   "Подготовка к ЕНТ": { icon: "✓", tags: "пробники, ошибки, стратегия" }
 };
 
 const subjectTopicPresets = {
+  "Обучение грамоте": ["буквы и звуки", "слоги", "чтение слов", "письмо букв", "простые предложения"],
   "Математика": ["числа и счет", "текстовые задачи", "величины", "геометрические фигуры", "дроби"],
   "Русский язык": ["звуки и буквы", "части речи", "предложение", "текст", "орфография"],
   "Казахский язык": ["сөздік қор", "сөйлем", "септік", "мәтін", "аударма"],
+  "Казахская литература": ["шығарма оқу", "кейіпкерлер", "негізгі ой", "мазмұндау", "талдау"],
   "Английский язык": ["alphabet and words", "reading", "present simple", "past simple", "speaking"],
   "Познание мира": ["семья и школа", "природа", "город и село", "безопасность", "профессии"],
   "Литературное чтение": ["чтение текста", "герой произведения", "главная мысль", "пересказ", "пословицы"],
+  "Русская литература": ["чтение произведения", "герои и поступки", "главная мысль", "хрестоматия", "пересказ"],
   "Естествознание": ["растения", "животные", "вещества", "энергия", "экосистемы"],
   "История Казахстана": ["древний Казахстан", "саки", "тюрки", "Казахское ханство", "независимость"],
   "География": ["карта", "координаты", "климат", "материки", "население"],
   "Информатика": ["информация", "алгоритмы", "таблицы", "код", "интернет-безопасность"],
+  "Цифровая грамотность": ["устройство компьютера", "файлы", "клавиатура", "интернет-безопасность", "цифровые навыки"],
+  "Музыка": ["музыкальные жанры", "казахская музыка", "музыка и театр", "музыка и кино", "слушание музыки"],
+  "Художественный труд": ["материалы и инструменты", "техника безопасности", "проектная работа", "дизайн", "декор"],
+  "Физическая культура": ["разминка", "подвижные игры", "координация", "командная работа", "здоровье"],
   "Алгебра": ["уравнения", "неравенства", "функции", "степени", "графики"],
   "Геометрия": ["треугольники", "параллельные прямые", "окружность", "площадь", "доказательство"],
   "Физика": ["скорость", "сила", "энергия", "давление", "электричество"],
   "Химия": ["атом", "элемент", "валентность", "реакции", "растворы"],
   "Биология": ["клетка", "ткани", "растения", "человек", "экология"],
   "Всемирная история": ["древний мир", "средние века", "новое время", "революции", "мировые войны"],
+  "Основы права": ["права человека", "обязанности", "Конституция", "семья и право", "ответственность"],
+  "Глобальные компетенции": ["этика общения", "медиаграмотность", "экология", "безопасность", "финансовая грамотность"],
+  "Начальная военная и технологическая подготовка": ["безопасность", "строевая подготовка", "первая помощь", "технологии", "гражданская защита"],
+  "Основы предпринимательства и бизнеса": ["бизнес-идея", "потребности", "бюджет", "маркетинг", "проект"],
+  "Графика и проектирование": ["чертеж", "масштаб", "проекция", "модель", "проектирование"],
   "Алгебра и начала анализа": ["функции", "тригонометрия", "предел", "производная", "интеграл"],
   "Подготовка к ЕНТ": ["диагностика пробника", "профильные предметы", "работа над ошибками", "тайм-менеджмент", "повторение формул"]
 };
 
 const gradeSubjectGroups = {
-  primary: ["Математика", "Русский язык", "Казахский язык", "Английский язык", "Познание мира", "Литературное чтение"],
-  middle: ["Математика", "Русский язык", "Казахский язык", "Английский язык", "Естествознание", "История Казахстана", "География", "Информатика"],
-  juniorHigh: ["Алгебра", "Геометрия", "Физика", "Химия", "Биология", "География", "История Казахстана", "Всемирная история", "Русский язык", "Казахский язык", "Английский язык", "Информатика"],
-  senior: ["Алгебра и начала анализа", "Геометрия", "Физика", "Химия", "Биология", "География", "История Казахстана", "Всемирная история", "Русский язык", "Казахский язык", "Английский язык", "Информатика", "Подготовка к ЕНТ"]
+  1: ["Обучение грамоте", "Математика", "Казахский язык", "Английский язык", "Познание мира", "Естествознание", "Художественный труд", "Музыка", "Физическая культура", "Цифровая грамотность"],
+  2: ["Русский язык", "Литературное чтение", "Казахский язык", "Английский язык", "Математика", "Познание мира", "Естествознание", "Художественный труд", "Музыка", "Физическая культура", "Цифровая грамотность"],
+  3: ["Русский язык", "Литературное чтение", "Казахский язык", "Английский язык", "Математика", "Познание мира", "Естествознание", "Художественный труд", "Музыка", "Физическая культура", "Цифровая грамотность"],
+  4: ["Русский язык", "Литературное чтение", "Казахский язык", "Английский язык", "Математика", "Познание мира", "Естествознание", "Художественный труд", "Музыка", "Физическая культура", "Цифровая грамотность"],
+  5: ["Русский язык", "Русская литература", "Казахский язык", "Казахская литература", "Английский язык", "Математика", "Естествознание", "История Казахстана", "Всемирная история", "География", "Информатика", "Художественный труд", "Музыка", "Физическая культура", "Глобальные компетенции"],
+  6: ["Русский язык", "Русская литература", "Казахский язык", "Казахская литература", "Английский язык", "Математика", "Естествознание", "История Казахстана", "Всемирная история", "География", "Информатика", "Художественный труд", "Музыка", "Физическая культура", "Глобальные компетенции"],
+  7: ["Русский язык", "Русская литература", "Казахский язык", "Казахская литература", "Английский язык", "Алгебра", "Геометрия", "Информатика", "Физика", "Химия", "Биология", "География", "История Казахстана", "Всемирная история", "Художественный труд", "Физическая культура", "Глобальные компетенции"],
+  8: ["Русский язык", "Русская литература", "Казахский язык", "Казахская литература", "Английский язык", "Алгебра", "Геометрия", "Информатика", "Физика", "Химия", "Биология", "География", "История Казахстана", "Всемирная история", "Художественный труд", "Физическая культура", "Глобальные компетенции"],
+  9: ["Русский язык", "Русская литература", "Казахский язык", "Казахская литература", "Английский язык", "Алгебра", "Геометрия", "Информатика", "Физика", "Химия", "Биология", "География", "История Казахстана", "Всемирная история", "Основы права", "Художественный труд", "Физическая культура", "Глобальные компетенции"],
+  10: ["Алгебра и начала анализа", "Геометрия", "Информатика", "Казахский язык", "Казахская литература", "Русский язык", "Русская литература", "Английский язык", "История Казахстана", "Физическая культура", "Начальная военная и технологическая подготовка", "Физика", "Химия", "Биология", "География", "Всемирная история", "Основы права", "Основы предпринимательства и бизнеса", "Графика и проектирование", "Глобальные компетенции", "Подготовка к ЕНТ"],
+  11: ["Алгебра и начала анализа", "Геометрия", "Информатика", "Казахский язык", "Казахская литература", "Русский язык", "Русская литература", "Английский язык", "История Казахстана", "Физическая культура", "Начальная военная и технологическая подготовка", "Физика", "Химия", "Биология", "География", "Всемирная история", "Основы права", "Основы предпринимательства и бизнеса", "Графика и проектирование", "Глобальные компетенции", "Подготовка к ЕНТ"]
 };
+
+const userTextbookCatalog = [
+  {
+    grade: 6,
+    subject: "Информатика",
+    subjectKey: "informatics",
+    title: "Информатика. Учебник для 6 класса общеобразовательной школы",
+    publisher: "Арман-ПВ",
+    year: "2020",
+    language: "ru",
+    authors: ["Г. И. Салгараева", "Г. А. Копеева", "А. А. Каптагаева", "А. Г. Юсупова"],
+    isbn: "978-601-318-309-1",
+    pages: 160,
+    source: "Фото пользователя + перечень электронных учебников gov.kz",
+    sourceUrl: "https://www.gov.kz/memleket/entities/edu/documents/details/892700?lang=ru",
+    status: "verified_reference",
+    resourceStatus: "official_download_awaiting_check"
+  },
+  {
+    grade: 6,
+    subject: "Всемирная история",
+    subjectKey: "world_history",
+    title: "Всемирная история. Средние века. Учебник для 6 класса",
+    publisher: "Мектеп",
+    year: "2018",
+    language: "ru",
+    authors: ["Г. К. Кокебаева", "Р. С. Мырзабекова", "Е. Т. Картабаева"],
+    isbn: "978-601-07-0955-3",
+    pages: 136,
+    source: "Фото пользователя + каталог издательства Мектеп",
+    sourceUrl: "https://mektep.kz/catalog/show/vsemirna_istori_u_ebnik",
+    status: "publisher_verified",
+    resourceStatus: "catalog_record_only"
+  },
+  {
+    grade: 6,
+    subject: "Естествознание",
+    subjectKey: "science",
+    title: "Естествознание. Учебник для 6 класса",
+    publisher: "Мектеп",
+    year: "2018",
+    language: "ru",
+    authors: ["Е. А. Очкур", "Т. Г. Белоусова", "Н. А. Паимцева", "В. М. Ударцева"],
+    isbn: "978-601-07-0982-9",
+    pages: 200,
+    source: "Фото пользователя + каталог издательства Мектеп",
+    sourceUrl: "https://mektep.kz/catalog/show/estestvoznanie_u_ebnik3",
+    status: "publisher_verified",
+    resourceStatus: "catalog_record_only"
+  },
+  {
+    grade: 6,
+    subject: "Русский язык",
+    subjectKey: "russian",
+    title: "Русский язык. Учебник для 6 класса. Часть 1 + CD",
+    publisher: "Мектеп",
+    year: "2018",
+    language: "ru",
+    authors: ["З. К. Сабитова", "А. Р. Бейсембаев"],
+    isbn: "978-601-07-0986-7",
+    pages: 176,
+    source: "Фото пользователя + каталог издательства Мектеп",
+    sourceUrl: "https://www.kz.mektep.kz/catalog/show/russkiy_zik_u_ebnik_ast_1_2_cd",
+    status: "publisher_verified",
+    resourceStatus: "catalog_record_only"
+  },
+  {
+    grade: 6,
+    subject: "Русская литература",
+    subjectKey: "russian_literature",
+    title: "Русская литература. Хрестоматия для 6 класса",
+    publisher: "Атамұра",
+    year: "2018",
+    language: "ru",
+    authors: ["Л. С. Рыгалова", "Д. А. Берденова"],
+    source: "Фото пользователя",
+    sourceUrl: "",
+    status: "photo_needs_official_verification",
+    resourceStatus: "awaiting_official_source"
+  },
+  {
+    grade: 6,
+    subject: "Музыка",
+    subjectKey: "music",
+    title: "Музыка. Учебник для 6 класса",
+    publisher: "Қазақ энциклопедиясы",
+    year: "2018",
+    language: "ru",
+    authors: ["А. Мусахаджаева", "А. Сабырова", "М. Абугазы", "Г. Гизатова"],
+    pages: 144,
+    source: "Фото пользователя; издательство требует официальной проверки",
+    sourceUrl: "",
+    status: "photo_needs_official_verification",
+    resourceStatus: "awaiting_official_source"
+  },
+  {
+    grade: 6,
+    subject: "Английский язык",
+    subjectKey: "english",
+    title: "Excel for Kazakhstan. Grade 6. Student's Book",
+    publisher: "Express Publishing",
+    year: "2018",
+    language: "en",
+    authors: ["Virginia Evans", "Jenny Dooley", "Bob Obee"],
+    isbn: "978-1-4715-5555-8",
+    source: "Фото пользователя + перечень электронных учебников gov.kz",
+    sourceUrl: "https://www.gov.kz/memleket/entities/edu/documents/details/892700?lang=ru",
+    status: "verified_reference",
+    resourceStatus: "official_download_awaiting_check"
+  },
+  {
+    grade: 6,
+    subject: "Художественный труд",
+    subjectKey: "art_labor",
+    title: "Художественный труд. Учебник для 6 класса, вариант для девочек + CD",
+    publisher: "Келешек-2030",
+    year: "2018",
+    language: "ru",
+    authors: ["Р. Ш. Алимсаева", "И. А. Развенкова", "О. С. Лосенко", "Е. Е. Велькер"],
+    source: "Фото пользователя + каталог издательства Келешек-2030",
+    sourceUrl: "https://keleshek-2030.kz/tov.php?tov=849",
+    status: "publisher_verified",
+    resourceStatus: "catalog_record_only"
+  },
+  {
+    grade: 5,
+    subject: "Математика",
+    subjectKey: "math",
+    title: "Математика. 5 класс. Тренажеры",
+    publisher: "НВЦ «Образовательный технопарк»",
+    year: "2025",
+    language: "ru",
+    authors: [],
+    source: "Фото пользователя",
+    sourceUrl: "https://znavka.kz",
+    status: "photo_needs_official_verification",
+    resourceStatus: "uploaded_awaiting_ocr"
+  },
+  {
+    grade: 5,
+    subject: "Математика",
+    subjectKey: "math",
+    title: "Математика. 5 класс. Осыды. Обобщенные способы учебной деятельности (в схемах)",
+    publisher: "НВЦ «Образовательный технопарк»",
+    year: "2025",
+    language: "ru",
+    authors: [],
+    source: "Фото пользователя",
+    sourceUrl: "https://znavka.kz",
+    status: "photo_needs_official_verification",
+    resourceStatus: "uploaded_awaiting_ocr"
+  },
+  {
+    grade: 5,
+    subject: "Английский язык",
+    subjectKey: "english",
+    title: "Excel for Kazakhstan. Grade 5. Workbook & Grammar Book",
+    publisher: "Express Publishing",
+    year: "awaiting_review",
+    language: "en",
+    authors: ["Virginia Evans", "Jenny Dooley", "Bob Obee"],
+    isbn: "978-1-4715-5777-4",
+    source: "Фото пользователя",
+    sourceUrl: "",
+    status: "photo_needs_official_verification",
+    resourceStatus: "uploaded_awaiting_ocr"
+  },
+  {
+    grade: 5,
+    subject: "Естествознание",
+    subjectKey: "science",
+    title: "Естествознание. 5 класс. Контурные карты",
+    publisher: "awaiting_review",
+    year: "awaiting_review",
+    language: "ru",
+    authors: [],
+    source: "PDF-скан пользователя",
+    sourceUrl: "",
+    status: "uploaded_awaiting_ocr",
+    resourceStatus: "uploaded_awaiting_ocr"
+  },
+  {
+    grade: 5,
+    subject: "История Казахстана",
+    subjectKey: "history_kz",
+    title: "История древнего Казахстана. 5 класс. Атлас",
+    publisher: "awaiting_review",
+    year: "awaiting_review",
+    language: "ru",
+    authors: [],
+    source: "PDF-скан пользователя",
+    sourceUrl: "",
+    status: "uploaded_awaiting_ocr",
+    resourceStatus: "uploaded_awaiting_ocr"
+  },
+  {
+    grade: 5,
+    subject: "История Казахстана",
+    subjectKey: "history_kz",
+    title: "История древнего Казахстана. 5 класс. Контурные карты",
+    publisher: "awaiting_review",
+    year: "awaiting_review",
+    language: "ru",
+    authors: [],
+    source: "PDF-скан пользователя",
+    sourceUrl: "",
+    status: "uploaded_awaiting_ocr",
+    resourceStatus: "uploaded_awaiting_ocr"
+  },
+  {
+    grade: 5,
+    subject: "Всемирная история",
+    subjectKey: "world_history",
+    title: "История древнего мира. 5 класс. Атлас",
+    publisher: "awaiting_review",
+    year: "awaiting_review",
+    language: "ru",
+    authors: [],
+    source: "PDF-скан пользователя",
+    sourceUrl: "",
+    status: "uploaded_awaiting_ocr",
+    resourceStatus: "uploaded_awaiting_ocr"
+  },
+  {
+    grade: 5,
+    subject: "Всемирная история",
+    subjectKey: "world_history",
+    title: "История древнего мира. 5 класс. Контурные карты",
+    publisher: "awaiting_review",
+    year: "awaiting_review",
+    language: "ru",
+    authors: [],
+    source: "PDF-скан пользователя",
+    sourceUrl: "",
+    status: "uploaded_awaiting_ocr",
+    resourceStatus: "uploaded_awaiting_ocr"
+  },
+  {
+    grade: 3,
+    subject: "Познание мира",
+    subjectKey: "world_knowledge",
+    title: "Познание мира. Учебник для 3 класса общеобразовательной школы",
+    publisher: "Атамұра",
+    year: "2018",
+    language: "ru",
+    authors: ["Б. К. Турмашева", "С. С. Салыш", "В. Г. Путан"],
+    source: "Фото пользователя",
+    sourceUrl: "",
+    status: "photo_needs_official_verification",
+    resourceStatus: "uploaded_awaiting_ocr"
+  }
+];
+
+const textbookCatalog = [
+  ...(window.OFFICIAL_TEXTBOOK_CATALOG || []),
+  ...userTextbookCatalog
+];
 
 const curriculumData = Array.from({ length: 11 }, (_, index) => {
   const grade = index + 1;
@@ -76,10 +364,130 @@ const curriculumData = Array.from({ length: 11 }, (_, index) => {
 });
 
 function getSubjectNamesByGrade(grade) {
-  if (grade <= 4) return gradeSubjectGroups.primary;
-  if (grade <= 6) return gradeSubjectGroups.middle;
-  if (grade <= 9) return gradeSubjectGroups.juniorHigh;
-  return gradeSubjectGroups.senior;
+  return gradeSubjectGroups[grade] || gradeSubjectGroups[6];
+}
+
+function getSubjectAliases(subjectTitle) {
+  const key = subjectToKey(subjectTitle);
+  const aliases = {
+    art_labor: ["art_labor", "labor_training", "visual_art"],
+    reading: ["reading", "russian_literature"],
+    kazakh: ["kazakh", "kazakh_literature"],
+    global_competencies: ["global_competencies"],
+    physical_education: ["physical_education"]
+  };
+  return aliases[key] || [key];
+}
+
+function getTextbookRecordsForSubject(subjectTitle) {
+  const aliases = getSubjectAliases(subjectTitle);
+  return textbookCatalog.filter((record) => (
+    record.grade === currentGrade
+    && (record.subject === subjectTitle || aliases.includes(record.subjectKey))
+  ));
+}
+
+function materialTypeLabel(type) {
+  const labels = {
+    main_textbook: "Основной учебник",
+    workbook: "Рабочая тетрадь",
+    reader: "Хрестоматия",
+    atlas: "Атлас",
+    contour_maps: "Контурные карты",
+    trainer: "Тренажёр",
+    teacher_material: "Методическое пособие",
+    additional_material: "Дополнительный материал"
+  };
+  return labels[type] || labels.additional_material;
+}
+
+function materialTypeRank(type) {
+  return {
+    main_textbook: 1,
+    workbook: 2,
+    reader: 3,
+    atlas: 4,
+    contour_maps: 5,
+    trainer: 6,
+    teacher_material: 7,
+    additional_material: 8
+  }[type] || 9;
+}
+
+function inferMaterialType(record) {
+  if (record.materialType) return record.materialType;
+  const title = (record.title || "").toLowerCase();
+  if (title.includes("workbook") || title.includes("grammar book") || title.includes("рабочая тетрад")) return "workbook";
+  if (title.includes("хрестомат")) return "reader";
+  if (title.includes("атлас")) return "atlas";
+  if (title.includes("контур") && title.includes("карт")) return "contour_maps";
+  if (title.includes("тренаж")) return "trainer";
+  return "main_textbook";
+}
+
+function formatTextbookRecord(record) {
+  const authors = record.authors?.length ? ` — ${record.authors.join(", ")}` : "";
+  const publisher = record.publisher && record.publisher !== "awaiting_review" ? record.publisher : "издательство уточняется";
+  const year = record.year && record.year !== "awaiting_review" ? record.year : "год уточняется";
+  const details = `${record.title}${authors}. ${publisher}, ${year}.`;
+  const status = record.status === "official_verified_metadata" || record.verificationStatus === "official_verified_metadata"
+    ? "официальный перечень gov.kz, метаданные подтверждены"
+    : record.status === "publisher_verified" || record.status === "verified_reference"
+      ? "проверено по издателю/официальному перечню"
+    : "добавлено по фото, нужна проверка";
+  const firstLink = record.links?.[0]?.url || record.sourceUrl;
+  const source = firstLink
+    ? ` <a href="${firstLink}" target="_blank" rel="noopener">Источник</a>`
+    : "";
+  return `${details} <small>${status}. ${record.resourceStatus}.${source}</small>`;
+}
+
+function renderResourceRecords(records) {
+  if (!records.length) {
+    return `<li><strong>${t("textbook")}:</strong> Подтверждённый официальный источник пока не найден</li>`;
+  }
+
+  const groups = [...records]
+    .sort((a, b) => materialTypeRank(inferMaterialType(a)) - materialTypeRank(inferMaterialType(b)))
+    .reduce((acc, record) => {
+      const type = inferMaterialType(record);
+      acc[type] ||= [];
+      acc[type].push(record);
+      return acc;
+    }, {});
+
+  return Object.entries(groups)
+    .map(([type, items]) => `<li><strong>${materialTypeLabel(type)}:</strong> ${items.map(formatTextbookRecord).join("<br>")}</li>`)
+    .join("");
+}
+
+function searchLocalKnowledgeBase(path) {
+  const params = new URLSearchParams(path.split("?")[1] || "");
+  const keyword = (params.get("keyword") || "").toLowerCase();
+  const grade = Number(params.get("grade") || currentGrade);
+  const subject = (params.get("subject") || "").toLowerCase();
+  const language = params.get("language") || currentLang;
+  const results = textbookCatalog
+    .filter((record) => record.grade === grade)
+    .filter((record) => !subject || record.subjectKey === subject || record.subject.toLowerCase().includes(subject))
+    .filter((record) => !language || record.language === language || record.language === "ru")
+    .filter((record) => {
+      const text = JSON.stringify(record).toLowerCase();
+      return !keyword || text.includes(keyword);
+    })
+    .map((record) => ({ source: "textbooks", priority: 2, record }));
+
+  return {
+    query: { keyword, grade, subject, language },
+    priority: ["official_curriculum", "textbooks", "sor_soch", "teacher_materials", "ai_explanation"],
+    results,
+    awaitingImport: results.length ? [] : [
+      { entityType: "curriculum", scope: "Kazakhstan official curriculum grades 1-11", status: "awaiting_import" },
+      { entityType: "textbooks", scope: "Official or licensed textbooks and workbooks", status: "awaiting_import" },
+      { entityType: "assessment", scope: "SOR, SOCH, ENT question banks and criteria", status: "awaiting_import" }
+    ],
+    canUseAiFallback: results.length === 0
+  };
 }
 
 function getCurriculum() {
@@ -88,9 +496,11 @@ function getCurriculum() {
 
 function subjectToKey(title) {
   const known = {
+    "Обучение грамоте": "literacy",
     "Математика": "math",
     "Русский язык": "russian",
     "Казахский язык": "kazakh",
+    "Казахская литература": "kazakh_literature",
     "Английский язык": "english",
     "Познание мира": "world_knowledge",
     "Литературное чтение": "reading",
@@ -98,12 +508,22 @@ function subjectToKey(title) {
     "История Казахстана": "history_kz",
     "География": "geography",
     "Информатика": "informatics",
+    "Цифровая грамотность": "digital_literacy",
     "Алгебра": "algebra",
     "Геометрия": "geometry",
     "Физика": "physics",
     "Химия": "chemistry",
     "Биология": "biology",
     "Всемирная история": "world_history",
+    "Русская литература": "russian_literature",
+    "Музыка": "music",
+    "Художественный труд": "art_labor",
+    "Физическая культура": "physical_education",
+    "Основы права": "law",
+    "Глобальные компетенции": "global_competencies",
+    "Начальная военная и технологическая подготовка": "nvtp",
+    "Основы предпринимательства и бизнеса": "business",
+    "Графика и проектирование": "graphics_design",
     "Алгебра и начала анализа": "calculus",
     "Подготовка к ЕНТ": "ent"
   };
@@ -487,17 +907,7 @@ function makePublicApiFallback(path, body = {}) {
   }
 
   if (path.startsWith("/api/kb/search")) {
-    return {
-      query: {},
-      priority: ["official_curriculum", "textbooks", "sor_soch", "teacher_materials", "ai_explanation"],
-      results: [],
-      awaitingImport: [
-        { entityType: "curriculum", scope: "Kazakhstan official curriculum grades 1-11", status: "awaiting_import" },
-        { entityType: "textbooks", scope: "Official or licensed textbooks and workbooks", status: "awaiting_import" },
-        { entityType: "assessment", scope: "SOR, SOCH, ENT question banks and criteria", status: "awaiting_import" }
-      ],
-      canUseAiFallback: true
-    };
+    return searchLocalKnowledgeBase(path);
   }
 
   if (path === "/api/ask") {
@@ -936,6 +1346,7 @@ async function renderKnowledgeBaseSearch() {
 function renderMaterials() {
   const subject = currentSubject();
   const curriculum = getCurriculum();
+  const textbookRecords = getTextbookRecordsForSubject(subject.title);
   document.getElementById("materialsTitle").textContent = uiLang === "en"
     ? `${subjectLabel(subject.title)}: Grade ${currentGrade}`
     : `${subjectLabel(subject.title)}: ${currentGrade} ${t("gradeClass")}`;
@@ -945,11 +1356,7 @@ function renderMaterials() {
     .map((topic) => `<li>${topic}</li>`)
     .join("");
 
-  document.getElementById("resourceList").innerHTML = [
-    `<strong>${t("textbook")}:</strong> ${t("textbookStub")}`,
-    `<strong>${t("workbook")}:</strong> ${t("materialsStub")}`,
-    `<strong>${t("knowledgeBase")}:</strong> ${t("materialsStub")}`
-  ].map((item) => `<li>${item}</li>`).join("");
+  document.getElementById("resourceList").innerHTML = renderResourceRecords(textbookRecords);
 
   const assessmentItems = isNoMarksGrade()
     ? [

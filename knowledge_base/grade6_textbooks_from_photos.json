@@ -1,0 +1,164 @@
+{
+  "note": "Textbook catalog created from user-provided photos and publisher/official reference checks. Do not treat textbook page content as imported or trusted until official files or OCR results are reviewed.",
+  "fileType": "json",
+  "originalName": "grade6_textbooks_from_user_photos_2026-07-17.json",
+  "sourceType": "textbook_catalog",
+  "sourceUrl": "user_photos_plus_publisher_or_official_references",
+  "license": "metadata_only_no_full_text",
+  "academicYear": "2026-2027",
+  "language": "ru",
+  "records": [
+    {
+      "entityType": "textbook",
+      "id": "tb_grade6_ru_informatics_armanpv_2020",
+      "title": "Информатика. Учебник для 6 класса общеобразовательной школы",
+      "publisher": "Арман-ПВ",
+      "grade": 6,
+      "language": "ru",
+      "subject": "informatics",
+      "subjectTitle": "Информатика",
+      "authors": ["Г. И. Салгараева", "Г. А. Копеева", "А. А. Каптагаева", "А. Г. Юсупова"],
+      "edition": "2020",
+      "isbn": "978-601-318-309-1",
+      "pagesCount": 160,
+      "downloadableResource": "awaiting_official_download_check",
+      "sourceReferences": [
+        "user_photo: WhatsApp Image 2026-07-17 at 18.15.27 (1).jpeg",
+        "https://www.gov.kz/memleket/entities/edu/documents/details/892700?lang=ru"
+      ],
+      "status": "imported_needs_review"
+    },
+    {
+      "entityType": "textbook",
+      "id": "tb_grade6_ru_world_history_mektep_2018",
+      "title": "Всемирная история. Средние века. Учебник для 6 класса",
+      "publisher": "Мектеп",
+      "grade": 6,
+      "language": "ru",
+      "subject": "world_history",
+      "subjectTitle": "Всемирная история",
+      "authors": ["Г. К. Кокебаева", "Р. С. Мырзабекова", "Е. Т. Картабаева"],
+      "edition": "2018",
+      "isbn": "978-601-07-0955-3",
+      "pagesCount": 136,
+      "downloadableResource": "catalog_record_only",
+      "sourceReferences": [
+        "user_photo: WhatsApp Image 2026-07-17 at 18.15.27 (2).jpeg",
+        "https://mektep.kz/catalog/show/vsemirna_istori_u_ebnik"
+      ],
+      "status": "imported_needs_review"
+    },
+    {
+      "entityType": "textbook",
+      "id": "tb_grade6_ru_science_mektep_2018",
+      "title": "Естествознание. Учебник для 6 класса",
+      "publisher": "Мектеп",
+      "grade": 6,
+      "language": "ru",
+      "subject": "science",
+      "subjectTitle": "Естествознание",
+      "authors": ["Е. А. Очкур", "Т. Г. Белоусова", "Н. А. Паимцева", "В. М. Ударцева"],
+      "edition": "2018",
+      "isbn": "978-601-07-0982-9",
+      "pagesCount": 200,
+      "downloadableResource": "catalog_record_only",
+      "sourceReferences": [
+        "user_photo: WhatsApp Image 2026-07-17 at 18.15.29 (1).jpeg",
+        "https://mektep.kz/catalog/show/estestvoznanie_u_ebnik3"
+      ],
+      "status": "imported_needs_review"
+    },
+    {
+      "entityType": "textbook",
+      "id": "tb_grade6_ru_russian_mektep_part1_2018",
+      "title": "Русский язык. Учебник для 6 класса. Часть 1 + CD",
+      "publisher": "Мектеп",
+      "grade": 6,
+      "language": "ru",
+      "subject": "russian",
+      "subjectTitle": "Русский язык",
+      "authors": ["З. К. Сабитова", "А. Р. Бейсембаев"],
+      "edition": "2018",
+      "isbn": "978-601-07-0986-7",
+      "pagesCount": 176,
+      "downloadableResource": "catalog_record_only",
+      "sourceReferences": [
+        "user_photo: WhatsApp Image 2026-07-17 at 18.15.30 (1).jpeg",
+        "https://www.kz.mektep.kz/catalog/show/russkiy_zik_u_ebnik_ast_1_2_cd"
+      ],
+      "status": "imported_needs_review"
+    },
+    {
+      "entityType": "textbook",
+      "id": "tb_grade6_ru_russian_literature_atamura_2018",
+      "title": "Русская литература. Хрестоматия для 6 класса",
+      "publisher": "Атамұра",
+      "grade": 6,
+      "language": "ru",
+      "subject": "russian_literature",
+      "subjectTitle": "Русская литература",
+      "authors": ["Л. С. Рыгалова", "Д. А. Берденова"],
+      "edition": "2018",
+      "downloadableResource": "awaiting_official_source",
+      "sourceReferences": [
+        "user_photo: WhatsApp Image 2026-07-17 at 18.15.30.jpeg"
+      ],
+      "status": "imported_needs_review"
+    },
+    {
+      "entityType": "textbook",
+      "id": "tb_grade6_ru_music_qazaq_encyclopedia_2018",
+      "title": "Музыка. Учебник для 6 класса",
+      "publisher": "Қазақ энциклопедиясы",
+      "grade": 6,
+      "language": "ru",
+      "subject": "music",
+      "subjectTitle": "Музыка",
+      "authors": ["А. Мусахаджаева", "А. Сабырова", "М. Абугазы", "Г. Гизатова"],
+      "edition": "2018",
+      "pagesCount": 144,
+      "downloadableResource": "awaiting_official_source",
+      "sourceReferences": [
+        "user_photo: WhatsApp Image 2026-07-17 at 18.15.28 (2).jpeg"
+      ],
+      "status": "imported_needs_review"
+    },
+    {
+      "entityType": "textbook",
+      "id": "tb_grade6_en_excel_kazakhstan_express_2018",
+      "title": "Excel for Kazakhstan. Grade 6. Student's Book",
+      "publisher": "Express Publishing",
+      "grade": 6,
+      "language": "en",
+      "subject": "english",
+      "subjectTitle": "Английский язык",
+      "authors": ["Virginia Evans", "Jenny Dooley", "Bob Obee"],
+      "edition": "2018",
+      "isbn": "978-1-4715-5555-8",
+      "downloadableResource": "awaiting_official_download_check",
+      "sourceReferences": [
+        "user_photo: WhatsApp Image 2026-07-17 at 18.15.28.jpeg",
+        "https://www.gov.kz/memleket/entities/edu/documents/details/892700?lang=ru"
+      ],
+      "status": "imported_needs_review"
+    },
+    {
+      "entityType": "textbook",
+      "id": "tb_grade6_ru_art_labor_keleshek_2030_2018",
+      "title": "Художественный труд. Учебник для 6 класса, вариант для девочек + CD",
+      "publisher": "Келешек-2030",
+      "grade": 6,
+      "language": "ru",
+      "subject": "art_labor",
+      "subjectTitle": "Художественный труд",
+      "authors": ["Р. Ш. Алимсаева", "И. А. Развенкова", "О. С. Лосенко", "Е. Е. Велькер"],
+      "edition": "2018",
+      "downloadableResource": "catalog_record_only",
+      "sourceReferences": [
+        "user_photo: WhatsApp Image 2026-07-17 at 18.15.29.jpeg",
+        "https://keleshek-2030.kz/tov.php?tov=849"
+      ],
+      "status": "imported_needs_review"
+    }
+  ]
+}
