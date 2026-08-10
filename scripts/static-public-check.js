@@ -9,13 +9,15 @@ function fail(message) {
   throw new Error(message);
 }
 
-for (const fileName of ["index.html", "style.css", "i18n.js", "script.js", "official_textbooks.js"]) {
+for (const fileName of ["index.html", "style.css", "config.js", "supabase-client.js", "i18n.js", "script.js", "official_textbooks.js"]) {
   const filePath = path.join(publicDir, fileName);
   if (!fs.existsSync(filePath)) fail(`Missing public file: ${fileName}`);
 }
 
 const html = fs.readFileSync(path.join(publicDir, "index.html"), "utf8");
 if (!html.includes("official_textbooks.js")) fail("index.html does not load official_textbooks.js");
+if (!html.includes("config.js")) fail("index.html does not load config.js");
+if (!html.includes("supabase-client.js")) fail("index.html does not load supabase-client.js");
 if (html.includes("10 июля 2026")) fail("index.html still contains hard-coded old date");
 
 const context = { window: {} };

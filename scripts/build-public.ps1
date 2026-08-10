@@ -14,6 +14,8 @@ New-Item -ItemType Directory -Force -Path $publicDir | Out-Null
 Copy-Item -LiteralPath `
   (Join-Path $projectRoot "index.html"), `
   (Join-Path $projectRoot "style.css"), `
+  (Join-Path $projectRoot "config.js"), `
+  (Join-Path $projectRoot "supabase-client.js"), `
   (Join-Path $projectRoot "script.js"), `
   (Join-Path $projectRoot "i18n.js"), `
   (Join-Path $projectRoot "official_textbooks.js") `

@@ -664,7 +664,7 @@ const dailyThemes = [
 
 const analytics = JSON.parse(localStorage.getItem("mamaAiAnalytics") || "null") || {
   visits: 0,
-  users: ["Аружан"],
+  users: [],
   cities: {},
   questions: 0,
   correct: 0,
@@ -685,6 +685,8 @@ let apiToken = localStorage.getItem("mamaAiApiToken") || "";
 let serverOnline = false;
 let aiConfigured = false;
 let serverStudent = null;
+let cloudProfile = null;
+let cloudAuthReady = Boolean(window.MamaAiSupabase?.isConfigured?.());
 let animationsEnabled = localStorage.getItem("mamaAiAnimations") !== "off";
 let soundEnabled = localStorage.getItem("mamaAiSound") !== "off";
 let reducedMotionEnabled = localStorage.getItem("mamaAiReducedMotion") === "on" || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -702,7 +704,11 @@ const learningLanguageSelect = document.getElementById("learningLanguageSelect")
 const studentName = document.getElementById("studentName");
 const studentCity = document.getElementById("studentCity");
 const userEmail = document.getElementById("userEmail");
+const userPassword = document.getElementById("userPassword");
 const authProviderSelect = document.getElementById("authProviderSelect");
+const registerBtn = document.getElementById("registerBtn");
+const loginBtn = document.getElementById("loginBtn");
+const authMessage = document.getElementById("authMessage");
 const animationToggle = document.getElementById("animationToggle");
 const soundToggle = document.getElementById("soundToggle");
 const reducedMotionToggle = document.getElementById("reducedMotionToggle");
@@ -765,6 +771,7 @@ async function init() {
   fillGrades();
   bindEvents();
   applyTranslations();
+  await restoreCloudSession();
   await initServerSession();
   renderAll();
   saveAnalytics();
@@ -781,12 +788,112 @@ function fillGrades() {
   gradeSelect.value = String(currentGrade);
 }
 
+function getAuthForm() {
+  return {
+    name: studentName.value.trim() || "Ученик",
+    email: userEmail?.value.trim() || "",
+    password: userPassword?.value || "",
+    city: studentCity?.value.trim() || "Алматы",
+    grade: currentGrade,
+    role: roleSelect.value,
+    interfaceLanguage: uiLang,
+    learningLanguage: currentLang,
+    selectedSubjects: getSubjectNamesByGrade(currentGrade)
+  };
+}
+
+function setAuthMessage(message, isError = false) {
+  if (!authMessage) return;
+  authMessage.textContent = message;
+  authMessage.style.color = isError ? "var(--coral)" : "var(--muted)";
+}
+
+function applyCloudProfile(profile) {
+  if (!profile) return;
+  cloudProfile = profile;
+  cloudAuthReady = true;
+  if (studentName) studentName.value = profile.first_name || studentName.value;
+  if (studentCity) studentCity.value = profile.city || studentCity.value;
+  if (userEmail) userEmail.value = profile.email || userEmail.value;
+  if (roleSelect && ["student", "parent", "teacher"].includes(profile.role)) roleSelect.value = profile.role;
+  if (profile.grade) {
+    currentGrade = Number(profile.grade);
+    localStorage.setItem("mamaAiGrade", currentGrade);
+    if (gradeSelect) gradeSelect.value = String(currentGrade);
+  }
+  localStorage.setItem("mamaAiEmail", profile.email || "");
+  localStorage.setItem("mamaAiCity", profile.city || "");
+  setAuthMessage(profile.role === "admin"
+    ? "Вы вошли как администратор. Полная аналитика доступна через Supabase RLS."
+    : `Вход выполнен: ${profile.role}. Профиль сохраняется в Supabase.`);
+}
+
+async function restoreCloudSession() {
+  if (!window.MamaAiSupabase?.isConfigured?.()) {
+    setAuthMessage("Supabase ещё не подключён. Сейчас работает локальный режим на этом устройстве.");
+    return;
+  }
+  try {
+    const profile = await window.MamaAiSupabase.restoreProfile();
+    if (profile) applyCloudProfile(profile);
+    else setAuthMessage("Supabase подключён. Зарегистрируйтесь или войдите по email и паролю.");
+  } catch (error) {
+    setAuthMessage(`Supabase подключён, но сессия не восстановилась: ${error.message}`, true);
+  }
+}
+
+async function registerCloudAccount() {
+  const form = getAuthForm();
+  if (!window.MamaAiSupabase?.isConfigured?.()) {
+    setAuthMessage("Сначала вставьте SUPABASE_URL и SUPABASE_ANON_KEY в config.js.", true);
+    return;
+  }
+  if (!form.email || form.password.length < 6) {
+    setAuthMessage("Введите email и пароль минимум 6 символов.", true);
+    return;
+  }
+  try {
+    setAuthMessage("Создаю кабинет...");
+    const result = await window.MamaAiSupabase.signUp(form);
+    if (result.needsEmailConfirmation) {
+      setAuthMessage("Аккаунт создан. Если в Supabase включено подтверждение email, откройте письмо и затем нажмите «Войти».");
+      return;
+    }
+    applyCloudProfile(result.profile);
+    await syncServerState();
+    renderAll();
+  } catch (error) {
+    setAuthMessage(`Регистрация не прошла: ${error.message}`, true);
+  }
+}
+
+async function loginCloudAccount() {
+  const form = getAuthForm();
+  if (!window.MamaAiSupabase?.isConfigured?.()) {
+    setAuthMessage("Сначала вставьте SUPABASE_URL и SUPABASE_ANON_KEY в config.js.", true);
+    return;
+  }
+  if (!form.email || !form.password) {
+    setAuthMessage("Введите email и пароль.", true);
+    return;
+  }
+  try {
+    setAuthMessage("Вхожу в кабинет...");
+    const result = await window.MamaAiSupabase.signIn(form.email, form.password, form);
+    applyCloudProfile(result.profile);
+    await syncServerState();
+    renderAll();
+  } catch (error) {
+    setAuthMessage(`Вход не прошёл: ${error.message}`, true);
+  }
+}
+
 async function initServerSession() {
   try {
     const session = await apiFetch("/api/session", {
       method: "POST",
       body: {
-        name: studentName.value.trim() || "Аружан",
+        name: studentName.value.trim() || "Ученик",
         city: studentCity?.value.trim() || "Алматы",
         email: userEmail?.value.trim() || "",
         authProvider: authProviderSelect?.value || "email",
@@ -840,14 +947,30 @@ async function apiFetch(path, options = {}, requireAuth = true) {
     if (!response.ok) throw new Error(`API ${response.status}`);
     return response.json();
   } catch (error) {
-    const fallback = makePublicApiFallback(path, options.body || {});
+    const fallback = await makePublicApiFallback(path, options.body || {});
     if (fallback) return fallback;
     throw error;
   }
 }
 
-function makePublicApiFallback(path, body = {}) {
+async function makePublicApiFallback(path, body = {}) {
   if (path === "/api/session") {
+    if (cloudProfile) {
+      return {
+        token: window.MamaAiSupabase?.getSession?.()?.access_token || "supabase-session",
+        role: cloudProfile.role || "student",
+        student: {
+          id: cloudProfile.id,
+          name: cloudProfile.first_name || studentName.value.trim() || "Ученик",
+          city: cloudProfile.city || studentCity?.value.trim() || "Алматы",
+          email: cloudProfile.email || userEmail?.value.trim() || "",
+          grade: Number(cloudProfile.grade || currentGrade),
+          points,
+          streak,
+          grades: []
+        }
+      };
+    }
     return {
       token: "public-demo-token",
       role: body.role || "student",
@@ -865,6 +988,24 @@ function makePublicApiFallback(path, body = {}) {
   }
 
   if (path === "/api/state") {
+    if (cloudProfile) {
+      return {
+        student: {
+          id: cloudProfile.id,
+          name: cloudProfile.first_name || studentName.value.trim() || "Ученик",
+          city: cloudProfile.city || studentCity?.value.trim() || "Алматы",
+          email: cloudProfile.email || userEmail?.value.trim() || "",
+          grade: Number(cloudProfile.grade || currentGrade),
+          points,
+          streak,
+          grades: []
+        },
+        students: [],
+        analytics,
+        events: analytics.events || [],
+        aiConfigured: false
+      };
+    }
     return {
       student: {
         id: "public-demo-student",
@@ -942,6 +1083,19 @@ function makePublicApiFallback(path, body = {}) {
   }
 
   if (path === "/api/cloud/status") {
+    if (window.MamaAiSupabase?.isConfigured?.()) {
+      return {
+        provider: "supabase",
+        ready: Boolean(cloudProfile),
+        mode: cloudProfile ? "supabase_auth_active" : "supabase_configured_login_required",
+        authReady: true,
+        adminEmail: window.MamaAiSupabase.getAdminEmail(),
+        message: cloudProfile
+          ? "Supabase подключён. Профиль, события и результаты сохраняются в облако."
+          : "Supabase подключён. Войдите или зарегистрируйтесь, чтобы сохранять данные.",
+        requiredForProduction: ["edge_ai_function", "storage_for_photos", "email_provider_optional"]
+      };
+    }
     return {
       provider: "public-static",
       ready: false,
@@ -978,6 +1132,28 @@ function makePublicApiFallback(path, body = {}) {
   }
 
   if (path === "/api/admin/students") {
+    if (window.MamaAiSupabase?.isConfigured?.() && cloudProfile?.role === "admin") {
+      const cloud = await window.MamaAiSupabase.getAnalytics();
+      const students = (cloud.profiles || []).map((profile) => ({
+        id: profile.id,
+        name: profile.email,
+        grade: profile.grade,
+        city: profile.city,
+        email: profile.email,
+        role: profile.role,
+        status: profile.status,
+        lastSeenAt: profile.last_active_at,
+        daysInactive: daysSince(profile.last_active_at || profile.created_at),
+        points: 0
+      }));
+      return {
+        ownerOnly: true,
+        adminEmail: window.MamaAiSupabase.getAdminEmail(),
+        students,
+        inactiveStudents: students.filter((student) => Number(student.daysInactive || 0) >= 30),
+        cloud
+      };
+    }
     return makeLocalAdminStudents();
   }
 
@@ -1011,7 +1187,52 @@ function makePublicApiFallback(path, body = {}) {
     };
   }
 
-  if (path === "/api/quiz" || path === "/api/feedback" || path === "/api/grades/import") {
+  if (path === "/api/quiz") {
+    if (window.MamaAiSupabase?.isConfigured?.() && cloudProfile) {
+      await window.MamaAiSupabase.saveQuizAttempt({
+        ...body,
+        grade: currentGrade,
+        subject: body.subject || currentSubjectKey,
+        points: body.correct ? 10 : 2
+      });
+    }
+    return {
+      student: {
+        id: cloudProfile?.id || "public-local-student",
+        name: cloudProfile?.first_name || studentName.value.trim() || "Ученик",
+        grade: currentGrade,
+        points,
+        streak,
+        grades: []
+      },
+      analytics,
+      events: []
+    };
+  }
+
+  if (path === "/api/feedback") {
+    if (window.MamaAiSupabase?.isConfigured?.() && cloudProfile) {
+      await window.MamaAiSupabase.saveFeedback({
+        ...body,
+        grade: currentGrade,
+        subject: body.subject || currentSubjectKey
+      });
+    }
+    return {
+      student: {
+        id: cloudProfile?.id || "public-local-student",
+        name: cloudProfile?.first_name || studentName.value.trim() || "Ученик",
+        grade: currentGrade,
+        points,
+        streak,
+        grades: []
+      },
+      analytics,
+      events: []
+    };
+  }
+
+  if (path === "/api/grades/import") {
     return {
       student: {
         id: "public-demo-student",
@@ -1144,6 +1365,9 @@ function bindEvents() {
     });
   }
 
+  if (registerBtn) registerBtn.addEventListener("click", registerCloudAccount);
+  if (loginBtn) loginBtn.addEventListener("click", loginCloudAccount);
+
   roleSelect.addEventListener("change", () => {
     recordEvent("Роль", roleSelect.options[roleSelect.selectedIndex].textContent);
     initServerSession();
@@ -1188,9 +1412,12 @@ function bindEvents() {
   });
 
   document.getElementById("exportAnalyticsBtn").addEventListener("click", exportAnalytics);
-  document.getElementById("logoutBtn").addEventListener("click", () => {
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    if (window.MamaAiSupabase?.isConfigured?.()) await window.MamaAiSupabase.signOut();
+    cloudProfile = null;
     apiToken = "";
     localStorage.removeItem("mamaAiApiToken");
+    setAuthMessage("Вы вышли из кабинета.");
     recordEvent("Выход", studentName.value.trim() || "Ученик");
     addMessage("bot", "Сессия завершена. Можно снова выбрать роль и продолжить работу.");
   });
@@ -1439,8 +1666,10 @@ function getProgressValue(key, index, title = "") {
 async function renderAccountAndParent() {
   const subject = currentSubject();
   if (studentCabinetText) {
-    const city = studentCity?.value.trim() || serverStudent?.city || "Алматы";
-    studentCabinetText.textContent = `${studentName.value || "Ученик"}: ${currentGrade} класс, ${city}, ${subjectLabel(subject.title)}, ${points} баллов.`;
+    const city = cloudProfile?.city || studentCity?.value.trim() || serverStudent?.city || "Алматы";
+    const profileName = cloudProfile?.first_name || studentName.value || "Ученик";
+    const roleText = cloudProfile?.role ? `, роль: ${cloudProfile.role}` : "";
+    studentCabinetText.textContent = `${profileName}: ${currentGrade} класс, ${city}, ${subjectLabel(subject.title)}, ${points} баллов${roleText}.`;
   }
   if (parentCabinetText) {
     parentCabinetText.textContent = "Родительский кабинет показывает текущую тему, слабые места, рекомендации и план занятий.";
@@ -1455,7 +1684,7 @@ async function renderAccountAndParent() {
     cloudBackendText.textContent = cloud.message || "Локальный режим активен.";
     if (authStatusText) {
       authStatusText.textContent = cloud.authReady
-        ? `Supabase Auth готов: ${authProviderSelect?.value || "email"}.`
+        ? (cloudProfile ? `Supabase Auth активен: ${cloudProfile.email}.` : `Supabase Auth готов: ${authProviderSelect?.value || "email"}.`)
         : `Подготовлено под Supabase Auth. Сейчас вход: ${authProviderSelect?.value || "email"}, локальный режим.`;
     }
   } catch {
@@ -1490,17 +1719,19 @@ function makeLocalParentSummary() {
 
 function makeLocalAdminStudents() {
   const city = studentCity?.value.trim() || "Алматы";
+  const adminEmail = window.MamaAiSupabase?.getAdminEmail?.() || "gulmirau1979@gmail.com";
+  const currentEmail = (cloudProfile?.email || userEmail?.value.trim() || "").toLowerCase();
   return {
-    ownerOnly: roleSelect.value === "admin",
-    adminEmail: "gulmirau1979@gmail.com",
+    ownerOnly: cloudProfile?.role === "admin" || currentEmail === adminEmail,
+    adminEmail,
     students: [
       {
-        id: "public-demo-student",
-        name: studentName.value.trim() || "Ученик",
+        id: cloudProfile?.id || "public-local-student",
+        name: cloudProfile?.first_name || studentName.value.trim() || "Ученик",
         grade: currentGrade,
         city,
-        email: userEmail?.value.trim() || "",
-        role: roleSelect.value,
+        email: cloudProfile?.email || userEmail?.value.trim() || "",
+        role: cloudProfile?.role || roleSelect.value,
         status: "active",
         lastSeenAt: new Date().toISOString(),
         daysInactive: 0,
@@ -1644,7 +1875,7 @@ async function sendMessage() {
     const response = await apiFetch("/api/ask", {
       method: "POST",
       body: {
-        studentName: studentName.value.trim() || "Аружан",
+        studentName: studentName.value.trim() || "Ученик",
         grade: currentGrade,
         subjectKey: subject.key,
         subjectTitle: subject.title,
@@ -1739,7 +1970,7 @@ async function handlePhotoUpload(file) {
     const response = await apiFetch("/api/photo", {
       method: "POST",
       body: {
-        studentName: studentName.value.trim() || "Аружан",
+        studentName: studentName.value.trim() || "Ученик",
         grade: currentGrade,
         subjectKey: subject.key,
         subjectTitle: subject.title,
@@ -1925,7 +2156,7 @@ function checkQuizAnswer(button) {
   apiFetch("/api/quiz", {
     method: "POST",
     body: {
-      studentName: studentName.value.trim() || "Аружан",
+      studentName: studentName.value.trim() || "Ученик",
       grade: currentGrade,
       subject: currentSubject().title,
       correct: isCorrect
@@ -1956,7 +2187,7 @@ function saveFeedback(isHelpful) {
   apiFetch("/api/feedback", {
     method: "POST",
     body: {
-      studentName: studentName.value.trim() || "Аружан",
+      studentName: studentName.value.trim() || "Ученик",
       grade: currentGrade,
       text,
       helpful: isHelpful
@@ -1998,7 +2229,7 @@ async function importGrades(event) {
     const response = await apiFetch("/api/grades/import", {
       method: "POST",
       body: {
-        studentName: studentName.value.trim() || "Аружан",
+        studentName: studentName.value.trim() || "Ученик",
         grade: currentGrade,
         grades
       }
@@ -2144,10 +2375,19 @@ function formatShortDate(value) {
   }
 }
 
+function daysSince(value) {
+  const time = Date.parse(value || "");
+  if (!Number.isFinite(time)) return 0;
+  return Math.max(0, Math.floor((Date.now() - time) / (24 * 60 * 60 * 1000)));
+}
+
 function recordEvent(type, detail) {
   analytics.events.unshift({ type, detail, date: new Date().toLocaleString("ru-RU") });
   analytics.events = analytics.events.slice(0, 50);
   saveAnalytics();
+  if (window.MamaAiSupabase?.isConfigured?.() && cloudProfile) {
+    window.MamaAiSupabase.recordEvent(type, detail, cloudProfile).catch(() => {});
+  }
 }
 
 function trackLocalCity() {

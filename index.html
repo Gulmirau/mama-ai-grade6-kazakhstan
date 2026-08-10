@@ -116,6 +116,10 @@
             <input id="userEmail" type="email" value="gulmirau1979@gmail.com" placeholder="name@example.com" />
           </label>
           <label>
+            <span>Пароль</span>
+            <input id="userPassword" type="password" autocomplete="current-password" placeholder="Минимум 6 символов" />
+          </label>
+          <label>
             <span>Вход</span>
             <select id="authProviderSelect" aria-label="Способ входа">
               <option value="email">Email</option>
@@ -145,7 +149,6 @@
               <option value="student" data-i18n="roleStudent">Ученик</option>
               <option value="parent" data-i18n="roleParent">Родитель</option>
               <option value="teacher" data-i18n="roleTeacher">Учитель</option>
-              <option value="admin" data-i18n="roleAdmin">Администратор</option>
             </select>
           </label>
           <label>
@@ -169,6 +172,11 @@
               <option data-i18n="sourceSheets">Excel/Google Sheets</option>
             </select>
           </label>
+        </div>
+        <div class="auth-actions">
+          <button class="primary-btn" id="registerBtn" type="button">Зарегистрироваться</button>
+          <button class="ghost-btn" id="loginBtn" type="button">Войти</button>
+          <span id="authMessage" class="auth-message">Для общего кабинета подключите Supabase.</span>
         </div>
         <p class="system-note" id="profileNote">Проверяем подключение к серверу...</p>
       </section>
@@ -476,6 +484,8 @@
   <div class="confetti-layer" id="confettiLayer" aria-hidden="true"></div>
 
   <script src="i18n.js"></script>
+  <script src="config.js"></script>
+  <script src="supabase-client.js"></script>
   <script src="official_textbooks.js"></script>
   <script src="script.js"></script>
 </body>

@@ -4,6 +4,18 @@ Mama AI is a school helper prototype for Kazakhstan grades 1-11. The app now inc
 
 This project is still not a full production platform: AI tutoring, OCR, RAG, cloud database, authentication, progress, SOR/SOCH, and ENT are either demo or partial unless configured with real services and reviewed educational materials. See `PROJECT_STATUS.md`.
 
+## Working MVP cloud path
+
+The app now has a Supabase-ready MVP path for real accounts and shared analytics:
+
+- email/password registration and login for student, parent, and teacher;
+- admin is not selectable in the UI and is assigned only by the owner email in `config.js`;
+- city, class, language, role, events, quiz attempts, progress, and feedback can be saved to Supabase;
+- Row Level Security migration is provided in `supabase/migrations/202608100001_mvp_auth_rls.sql`;
+- setup instructions for Gulmira are in `SETUP_FOR_GULMIRA.md`.
+
+GitHub Pages will remain in local/static mode until `SUPABASE_URL` and `SUPABASE_ANON_KEY` are filled in `config.js` and the migration is run in Supabase. Never put service role keys or OpenAI API keys into public files.
+
 ## Knowledge Base: official educational materials
 
 Mama AI now has the backend architecture for a real Knowledge Base. The project does not include fictional official Kazakhstan curriculum, textbook, SOR, SOCH, or UNT content. Missing records are marked as `awaiting_import`.

@@ -467,6 +467,30 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue); }
   line-height: 1.5;
 }
 
+.auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.primary-btn {
+  min-height: 44px;
+  border: 0;
+  border-radius: 16px;
+  padding: 10px 16px;
+  background: var(--blue);
+  color: #fff;
+  font-weight: 900;
+}
+
+.auth-message {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .subject-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
