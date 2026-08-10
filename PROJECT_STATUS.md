@@ -23,6 +23,7 @@ Last updated: 2026-08-10
 - Added `config.js` and `config.example.js`; only public Supabase URL and anon key belong here.
 - Added `.env.example` and `.gitignore` so private keys stay out of GitHub.
 - Added Supabase migration `supabase/migrations/202608100001_mvp_auth_rls.sql`.
+- Added Supabase Auth profile trigger `supabase/migrations/202608100002_auth_profile_trigger.sql` for projects with email confirmation enabled.
 - Added `SETUP_FOR_GULMIRA.md` with nontechnical setup steps.
 - Added static security/MVP checks in `scripts/mvp-auth-check.js`.
 

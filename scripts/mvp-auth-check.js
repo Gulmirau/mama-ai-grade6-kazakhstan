@@ -21,6 +21,7 @@ const script = read("script.js");
 const supabase = read("supabase-client.js");
 const config = read("config.js");
 const migration = read("supabase/migrations/202608100001_mvp_auth_rls.sql");
+const authTrigger = read("supabase/migrations/202608100002_auth_profile_trigger.sql");
 const gitignore = read(".gitignore");
 
 assert(index.includes("config.js"), "index.html loads config.js");
@@ -41,6 +42,8 @@ assert(migration.includes("teacher_classes"), "migration includes teacher-class 
 assert(migration.includes("test_attempts"), "migration includes test attempts");
 assert(migration.includes("user_events"), "migration includes analytics events");
 assert(migration.includes("public.can_read_profile"), "migration includes shared access function");
+assert(authTrigger.includes("handle_new_auth_user"), "auth trigger creates profile after signup");
+assert(authTrigger.includes("after insert on auth.users"), "auth trigger is attached to Supabase Auth users");
 
 assert(gitignore.includes(".env"), ".env is ignored");
 assert(gitignore.includes("data/"), "local data folder is ignored");
