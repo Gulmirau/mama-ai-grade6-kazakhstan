@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
@@ -197,6 +197,11 @@
           <article>
             <strong>Кабинет родителя</strong>
             <p id="parentCabinetText">Родитель увидит темы, слабые места и рекомендации.</p>
+            <div class="child-link-form">
+              <input id="childCodeInput" type="text" placeholder="Код ребёнка" autocomplete="off" />
+              <button class="ghost-btn" id="linkChildBtn" type="button">Привязать</button>
+            </div>
+            <p class="auth-message" id="childLinkStatus">Родитель увидит ребёнка после привязки по коду.</p>
           </article>
           <article>
             <strong>Облачный backend</strong>
@@ -490,3 +495,4 @@
   <script src="script.js"></script>
 </body>
 </html>
+

@@ -272,6 +272,17 @@
     });
   }
 
+  async function linkChildByCode(childCode) {
+    const session = getSession();
+    if (!session?.user?.id || !isConfigured()) throw new Error("login_required");
+    const rows = await request("/rest/v1/rpc/link_child_by_code", {
+      method: "POST",
+      body: JSON.stringify({ child_code: childCode })
+    });
+    await recordEvent("parent_child_linked", "Родитель привязал ребёнка по коду");
+    return rows?.[0] || null;
+  }
+
   async function getAnalytics() {
     const [profiles, events, attempts, feedbackRows] = await Promise.all([
       request("/rest/v1/profiles?select=id,role,grade,city,status,last_active_at,created_at"),
@@ -296,6 +307,7 @@
     saveQuizAttempt,
     saveProgress,
     saveFeedback,
+    linkChildByCode,
     getAnalytics
   };
 })();

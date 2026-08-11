@@ -1,0 +1,74 @@
+{
+  "generatedAt": "2026-08-11T04:22:15.261Z",
+  "publicUrl": "https://gulmirau.github.io/mama-ai-grade6-kazakhstan/",
+  "passed": 14,
+  "failed": 0,
+  "skipped": 0,
+  "blocked": 1,
+  "results": [
+    {
+      "status": "PASS",
+      "message": "config.js uses APP_MODE=supabase"
+    },
+    {
+      "status": "PASS",
+      "message": "config.js has Supabase URL"
+    },
+    {
+      "status": "PASS",
+      "message": "config.js has Supabase publishable/anon key"
+    },
+    {
+      "status": "PASS",
+      "message": "public frontend files do not contain server secrets"
+    },
+    {
+      "status": "PASS",
+      "message": "RLS is enabled in migration"
+    },
+    {
+      "status": "PASS",
+      "message": "Auth trigger exists for automatic profiles"
+    },
+    {
+      "status": "PASS",
+      "message": "Parent-child link RPC exists"
+    },
+    {
+      "status": "PASS",
+      "message": "official textbook catalog has expected records"
+    },
+    {
+      "status": "PASS",
+      "message": "user textbook catalog preserves uploaded materials"
+    },
+    {
+      "status": "PASS",
+      "message": "coverage report covers grades 1-11"
+    },
+    {
+      "status": "PASS",
+      "message": "public GitHub Pages opens"
+    },
+    {
+      "status": "PASS",
+      "message": "public page loads config.js"
+    },
+    {
+      "status": "PASS",
+      "message": "public config is deployed with Supabase mode"
+    },
+    {
+      "status": "PASS",
+      "message": "public config has no forbidden server secret"
+    },
+    {
+      "status": "BLOCKED",
+      "message": "Supabase Auth signup via public key",
+      "detail": {
+        "status": "BLOCKED",
+        "reason": "email rate limit exceeded"
+      }
+    }
+  ]
+}

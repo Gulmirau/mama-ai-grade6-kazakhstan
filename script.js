@@ -736,6 +736,9 @@ const kbQuarter = document.getElementById("kbQuarter");
 const cloudStatusPill = document.getElementById("cloudStatusPill");
 const studentCabinetText = document.getElementById("studentCabinetText");
 const parentCabinetText = document.getElementById("parentCabinetText");
+const childCodeInput = document.getElementById("childCodeInput");
+const linkChildBtn = document.getElementById("linkChildBtn");
+const childLinkStatus = document.getElementById("childLinkStatus");
 const cloudBackendText = document.getElementById("cloudBackendText");
 const authStatusText = document.getElementById("authStatusText");
 const weeklyPlanList = document.getElementById("weeklyPlanList");
@@ -885,6 +888,37 @@ async function loginCloudAccount() {
     renderAll();
   } catch (error) {
     setAuthMessage(`Вход не прошёл: ${error.message}`, true);
+  }
+}
+
+async function linkChildToParent() {
+  if (!childLinkStatus || !childCodeInput) return;
+  const code = childCodeInput.value.trim();
+  if (!window.MamaAiSupabase?.isConfigured?.()) {
+    childLinkStatus.textContent = "Supabase не подключён. Привязка ребёнка доступна только в облачном кабинете.";
+    return;
+  }
+  if (!cloudProfile) {
+    childLinkStatus.textContent = "Сначала войдите как родитель, затем введите код ребёнка.";
+    return;
+  }
+  if (cloudProfile.role !== "parent" && cloudProfile.role !== "admin") {
+    childLinkStatus.textContent = "Привязка доступна только родителю.";
+    return;
+  }
+  if (!code) {
+    childLinkStatus.textContent = "Введите код ребёнка из кабинета ученика.";
+    return;
+  }
+  try {
+    childLinkStatus.textContent = "Проверяю код ребёнка...";
+    const child = await window.MamaAiSupabase.linkChildByCode(code);
+    childLinkStatus.textContent = child
+      ? `Ребёнок привязан: ${child.child_name || child.child_email || "профиль ученика"}, ${child.grade || ""} класс.`
+      : "Код принят, связь создана.";
+    recordEvent("Родитель", "Привязка ребёнка по коду");
+  } catch (error) {
+    childLinkStatus.textContent = `Не удалось привязать ребёнка: ${error.message}`;
   }
 }
 
@@ -1367,6 +1401,7 @@ function bindEvents() {
 
   if (registerBtn) registerBtn.addEventListener("click", registerCloudAccount);
   if (loginBtn) loginBtn.addEventListener("click", loginCloudAccount);
+  if (linkChildBtn) linkChildBtn.addEventListener("click", linkChildToParent);
 
   roleSelect.addEventListener("change", () => {
     recordEvent("Роль", roleSelect.options[roleSelect.selectedIndex].textContent);
@@ -1669,7 +1704,8 @@ async function renderAccountAndParent() {
     const city = cloudProfile?.city || studentCity?.value.trim() || serverStudent?.city || "Алматы";
     const profileName = cloudProfile?.first_name || studentName.value || "Ученик";
     const roleText = cloudProfile?.role ? `, роль: ${cloudProfile.role}` : "";
-    studentCabinetText.textContent = `${profileName}: ${currentGrade} класс, ${city}, ${subjectLabel(subject.title)}, ${points} баллов${roleText}.`;
+    const codeText = cloudProfile?.student_code ? ` Код ребёнка для родителя: ${cloudProfile.student_code}.` : "";
+    studentCabinetText.textContent = `${profileName}: ${currentGrade} класс, ${city}, ${subjectLabel(subject.title)}, ${points} баллов${roleText}.${codeText}`;
   }
   if (parentCabinetText) {
     parentCabinetText.textContent = "Родительский кабинет показывает текущую тему, слабые места, рекомендации и план занятий.";

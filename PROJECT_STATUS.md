@@ -1,31 +1,64 @@
 # Mama AI Project Status
 
-Last updated: 2026-08-10
+Last updated: 2026-08-11
 
-| Module | Status | What works | What is not complete |
-| ------ | ------ | ---------- | -------------------- |
-| Public static site | WORKING | Opens as static HTML/CSS/JS on GitHub Pages after files are uploaded. | GitHub Pages is not automatically updated from this local folder unless changes are pushed/uploaded. |
-| Grade selector 1-11 | WORKING | Each grade has its own subject list. | Subject-hour plans still need official curriculum import. |
-| Subject materials filtering | WORKING | Materials are filtered by selected grade and subject. | Some official entries use older/alternate subject names; aliases are handled for common cases. |
-| Official textbook catalog | PARTIAL | 288 metadata/link records imported from gov.kz for grades 1-11. | Records are metadata only and marked as needing review before becoming trusted lesson content. |
-| User-uploaded materials | PARTIAL | User photos/PDF metadata for grades 3, 5, and 6 are preserved separately. | PDF scans have no text layer and need OCR/human review. |
-| Knowledge Base schema | PARTIAL | Normalized schema and import workflow exist. | Production database and reviewed content chunks are not populated yet. |
-| AI tutor chat | DEMO | Step-by-step fallback tutor works; server can call OpenAI if configured. | No API key is configured by default; RAG over textbook page chunks is not implemented. |
-| OCR/photo understanding | DEMO | Photo endpoints and statuses exist. | Real OCR requires OpenAI API or OCR service and review workflow. |
-| SOR/SOCH/ENT | DEMO | UI and schema placeholders exist. | Official SOR/SOCH/ENT question banks are not imported. |
-| Auth/accounts | PARTIAL | Supabase email/password registration/login client is prepared; admin role is assigned by owner email only. | A Supabase project must be created, migration must be run, and `config.js` must receive URL + anon key before public users can register for real. |
-| Analytics/progress | PARTIAL | Supabase events, quiz attempts, progress, and feedback saving are wired for authenticated users; local fallback still works. | Real shared analytics appears only after Supabase is configured and users log in. |
-| Cloud backend | PARTIAL | Supabase schema, RLS migration, public config template, and setup guide exist. | Supabase project, storage, Edge AI function, and email provider are not connected yet. |
+## Summary
 
-## Latest MVP cloud update
+Supabase is connected in the public GitHub Pages build. The site no longer runs in `setup_required` mode. Public registration UI is available, admin is not self-selectable, and the frontend uses only the Supabase publishable/anon key.
 
-- Added `supabase-client.js` for Supabase Auth and REST calls without exposing secret keys.
-- Added `config.js` and `config.example.js`; only public Supabase URL and anon key belong here.
-- Added `.env.example` and `.gitignore` so private keys stay out of GitHub.
-- Added Supabase migration `supabase/migrations/202608100001_mvp_auth_rls.sql`.
-- Added Supabase Auth profile trigger `supabase/migrations/202608100002_auth_profile_trigger.sql` for projects with email confirmation enabled.
-- Added `SETUP_FOR_GULMIRA.md` with nontechnical setup steps.
-- Added static security/MVP checks in `scripts/mvp-auth-check.js`.
+Important audit note: the automated signup check on 2026-08-11 was blocked by Supabase email rate limiting after repeated test registrations. Earlier public UI signup reached Supabase Auth and returned the expected email-confirmation flow. Direct confirmation of `auth.users` and `public.profiles` rows requires either a confirmed test email session or viewing the Supabase dashboard.
 
-Important: the public GitHub Pages link is still not a real shared database until Supabase credentials are filled and pushed.
-| GitHub Pages E2E | PARTIAL | Local static package can be built and checked. | Public URL must be rechecked after push/upload because Codex cannot guarantee the remote deployment without successful push. |
+## Module Status
+
+| Module | Status | Checked | What works | What is not complete |
+| ------ | ------ | ------- | ---------- | -------------------- |
+| Public GitHub Pages | WORKING | Public URL opened and public `config.js` checked | Site opens, loads `config.js`, Supabase mode is deployed | GitHub Pages still has no private server functions |
+| Supabase config | WORKING | `scripts/mvp-auth-check.js`, `scripts/post-supabase-audit.js` | URL, publishable key, admin email, app mode are present; no service role key in public files | Keep service_role/OpenAI keys out of GitHub |
+| Auth UI | WORKING | Public browser check | Email/password fields exist; student/parent/teacher only; admin cannot be selected | Google login is not implemented |
+| Supabase Auth | PARTIAL | Public signup attempt | Signup reaches Supabase Auth and email confirmation flow | Current automated retest blocked by Supabase email rate limit; repeated login needs confirmed email |
+| Profiles | PARTIAL | SQL trigger check | Trigger migration exists for automatic profile creation after `auth.users` insert | Row creation must be verified in Supabase dashboard or with a confirmed test account |
+| RLS | PARTIAL | Static SQL audit | RLS enabled; student/parent/teacher/admin policies exist; anon cannot freely read profiles by design | Full live bypass testing needs confirmed accounts for student/parent/teacher/admin |
+| Grade selector 1-11 | WORKING | Public browser check + content tests | All grades 1-11 are selectable and saved locally | Official hour-by-hour curriculum still awaits import |
+| Subject filtering | WORKING | Content tests + public UI checks | 3rd grade includes `Познание мира`; 5th grade required subjects exist; 6th grade materials preserved | Subject list still should be reviewed annually against official curriculum updates |
+| Textbook filtering | WORKING | Public checks for 3rd grade `Познание мира` and 6th grade `Информатика` | Materials filter by selected grade and subject; no 5/7 grade leakage in checked scenarios | Some subjects have no verified main resource |
+| Official textbook catalog | PARTIAL | Coverage report regenerated | 288 official metadata/link records are available | Metadata is not full textbook text or RAG knowledge chunks |
+| User materials | PARTIAL | Coverage report regenerated | 17 user-provided records for grades 3, 5, and 6 are preserved | Scans/photos need OCR and human review |
+| Knowledge chunks / RAG | NOT IMPLEMENTED | Schema audit | Architecture exists | No real `knowledge_chunks` textbook-page corpus; AI does not search page chunks yet |
+| AI tutor chat | DEMO | Code audit | Step-by-step tutor fallback works in browser | No secure backend AI/RAG pipeline on GitHub Pages |
+| Photo / OCR | DEMO | Code audit | Photo UI and endpoint placeholders exist | No real OCR/vision backend |
+| SOR / SOCH / ENT | DEMO | Code/content audit | UI modes and schema placeholders exist | Official SOR/SOCH/ENT banks are not imported |
+| Mini-tests | PARTIAL | Code audit | Browser quiz works and Supabase save path exists for logged-in users | Full persistence needs confirmed login; question bank is not official |
+| Progress | PARTIAL | Code audit | Supabase `progress` write path exists for logged-in quiz attempts | Full reload/relogin persistence not live-verified due email confirmation/rate limit |
+| Feedback | PARTIAL | Code audit | Supabase `feedback` write path exists for logged-in users | Admin live view needs confirmed admin session |
+| Parent cabinet | PARTIAL | SQL/UI audit | Parent-child table exists; safe `link_child_by_code` RPC and UI field added | Third migration must be run in Supabase; full parent E2E not yet verified |
+| Teacher cabinet | PARTIAL | SQL audit | Teacher/class tables and RLS structure exist | No complete UI flow to assign teacher to class |
+| Admin analytics | PARTIAL | Code audit | Admin uses Supabase analytics path when logged in as configured admin email | Needs confirmed admin login and real user activity |
+| Mobile layout | PARTIAL | 390px browser check found overflow; CSS fix added | New CSS limits width and reduces overflow risk | Needs public recheck after deployment |
+| Security | PARTIAL | Static checks | No public service_role/OpenAI secret; admin cannot self-select; RLS SQL present | Live multi-account RLS bypass testing still needed |
+
+## Current Counts
+
+- Official textbook metadata records: 288
+- User-provided material records: 17
+- Grades covered in report: 1-11
+- Public audit: 14 passed, 0 failed, 1 blocked by Supabase email rate limit
+
+## Knowledge Base Plan
+
+The textbook catalog is not the same as a full AI knowledge base. The next content structure should be:
+
+`grade -> subject -> textbook -> chapter -> section -> page -> knowledge_chunk`
+
+Each chunk must include:
+
+- `textbook_id`
+- `grade`
+- `subject`
+- `chapter`
+- `section`
+- `page`
+- `text`
+- `source_url`
+- `verification_status`
+
+Mama AI should not claim RAG is working until real reviewed chunks exist and the chat searches them before answering.

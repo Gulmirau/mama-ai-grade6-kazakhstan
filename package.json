@@ -10,7 +10,8 @@
     "content:report": "node scripts/content-audit.js report",
     "content:test": "node scripts/content-audit.js test",
     "public:test": "node scripts/static-public-check.js",
-    "mvp:test": "node scripts/mvp-auth-check.js"
+    "mvp:test": "node scripts/mvp-auth-check.js",
+    "audit:post-supabase": "node scripts/post-supabase-audit.js"
   },
   "engines": {
     "node": ">=18"
