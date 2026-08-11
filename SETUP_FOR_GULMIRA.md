@@ -66,6 +66,21 @@ window.MAMA_AI_CONFIG = {
 7. Задайте вопрос или пройдите мини-тест.
 8. Проверьте таблицы `user_events`, `test_attempts`, `progress`, `feedback`.
 
+## Если письмо подтверждения открывает не сайт iMama
+
+В Supabase нужно проверить адрес возврата:
+
+1. Откройте Supabase.
+2. Зайдите в Authentication -> URL Configuration.
+3. В поле Site URL поставьте:
+   `https://gulmirau.github.io/mama-ai-grade6-kazakhstan/`
+4. В Redirect URLs добавьте:
+   `https://gulmirau.github.io/mama-ai-grade6-kazakhstan/`
+5. Сохраните настройки.
+6. Зарегистрируйте нового тестового пользователя и нажмите ссылку в новом письме.
+
+Если там случайно стоит другой адрес или ссылка на приложение, письмо может открываться не в iMama.
+
 ## 6. Как вы становитесь админом
 
 В форме обычные пользователи не могут выбрать роль админа.

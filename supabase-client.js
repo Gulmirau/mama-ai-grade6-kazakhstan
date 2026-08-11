@@ -14,6 +14,12 @@
     return String(config.ADMIN_EMAIL || "gulmirau1979@gmail.com").toLowerCase();
   }
 
+  function getRedirectUrl() {
+    const configured = String(config.APP_PUBLIC_URL || "").trim();
+    if (configured && /^https?:\/\//i.test(configured)) return configured.replace(/[#?].*$/, "");
+    return `${window.location.origin}${window.location.pathname}`;
+  }
+
   function getSession() {
     try {
       const session = JSON.parse(localStorage.getItem(storageKey) || "null");
@@ -58,6 +64,26 @@
     return data;
   }
 
+  async function getCurrentUser(session) {
+    const data = await request("/auth/v1/user", { session });
+    return data?.user || data;
+  }
+
+  async function consumeAuthRedirect() {
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    if (!hash.get("access_token")) return null;
+    const session = {
+      access_token: hash.get("access_token"),
+      refresh_token: hash.get("refresh_token") || "",
+      token_type: hash.get("token_type") || "bearer",
+      expires_at: Math.floor(Date.now() / 1000) + Number(hash.get("expires_in") || 3600)
+    };
+    session.user = await getCurrentUser(session);
+    setSession(session);
+    window.history.replaceState({}, document.title, `${window.location.origin}${window.location.pathname}${window.location.search}`);
+    return session;
+  }
+
   function roleForEmail(selectedRole, email) {
     const cleanRole = ["student", "parent", "teacher"].includes(selectedRole) ? selectedRole : "student";
     return String(email || "").toLowerCase() === getAdminEmail() ? "admin" : cleanRole;
@@ -99,7 +125,7 @@
   }
 
   async function signUp(form) {
-    const data = await request("/auth/v1/signup", {
+    const data = await request(`/auth/v1/signup?redirect_to=${encodeURIComponent(getRedirectUrl())}`, {
       method: "POST",
       body: JSON.stringify({
         email: form.email,
@@ -107,8 +133,13 @@
         data: {
           role: roleForEmail(form.role, form.email),
           first_name: form.name,
+          last_name: form.lastName || "",
           city: form.city,
-          grade: form.grade
+          school: form.school || "",
+          grade: form.grade,
+          interface_language: form.interfaceLanguage || "ru",
+          learning_language: form.learningLanguage || "ru",
+          selected_subjects: form.selectedSubjects || []
         }
       })
     });
@@ -143,7 +174,8 @@
   }
 
   async function restoreProfile() {
-    const session = getSession();
+    const redirectSession = await consumeAuthRedirect();
+    const session = redirectSession || getSession();
     if (!session?.user?.id) return null;
     const rows = await request(`/rest/v1/profiles?id=eq.${encodeURIComponent(session.user.id)}&select=*`, { session });
     const profile = rows?.[0] || null;
@@ -255,6 +287,7 @@
     isConfigured,
     getAdminEmail,
     getSession,
+    getRedirectUrl,
     signUp,
     signIn,
     signOut,
