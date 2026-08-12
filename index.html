@@ -6,7 +6,7 @@
   <title>Mama AI — школьный помощник для 1–11 классов</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body class="landing-active">
   <div class="daily-theme-layer" id="dailyThemeLayer" aria-hidden="true"></div>
   <div class="app-shell">
     <aside class="sidebar" aria-label="Навигация">
@@ -58,6 +58,74 @@
     </aside>
 
     <main class="workspace">
+      <section class="landing-panel" id="landing">
+        <div class="landing-copy">
+          <p class="eyebrow">Mama AI</p>
+          <h1>Привет! Я Mama Ai — твой помощник по школьным предметам</h1>
+          <p class="landing-lead">Объясню сложную тему, помогу выполнить задание и подготовиться к СОР и СОЧ. Начать можно сразу, без регистрации.</p>
+          <div class="landing-actions">
+            <button class="primary-btn big-action" id="guestStartBtn" type="button">Попробовать бесплатно</button>
+            <button class="ghost-btn big-action" id="videoGuideBtn" type="button">▶ Посмотреть, как это работает</button>
+          </div>
+          <div class="landing-language" aria-label="Язык интерфейса">
+            <button class="lang-btn active" data-lang="ru" type="button">Русский</button>
+            <button class="lang-btn" data-lang="kk" type="button">Қазақша</button>
+            <button class="lang-btn" data-lang="en" type="button">English</button>
+          </div>
+          <button class="link-button" id="adultLoginLink" type="button">Вход для родителей и учителей</button>
+        </div>
+        <div class="landing-demo" aria-hidden="true">
+          <div class="demo-card">1. Выбери класс</div>
+          <div class="demo-card">2. Задай вопрос</div>
+          <div class="demo-card">3. Получи объяснение</div>
+          <div class="demo-card reward">+10 баллов</div>
+        </div>
+      </section>
+
+      <section class="guest-status-panel" id="guestStatusPanel" hidden>
+        <strong id="guestModeTitle">Гостевой режим</strong>
+        <span id="guestActionsLeft">Можно попробовать ещё 3 задания</span>
+      </section>
+
+      <section class="guest-limit-panel" id="guestLimitPanel" hidden>
+        <h2>Тебе понравилось заниматься с Mama Ai?</h2>
+        <p>Попроси родителя создать бесплатный профиль. Тогда мы сохраним твои баллы, достижения и прогресс, а ты сможешь продолжить обучение.</p>
+        <div class="benefit-grid">
+          <span>Сохранение баллов</span>
+          <span>История занятий</span>
+          <span>Достижения</span>
+          <span>Персональный прогресс</span>
+          <span>Проверка домашки</span>
+          <span>Кабинет родителя</span>
+        </div>
+        <div class="landing-actions">
+          <button class="primary-btn" id="callParentBtn" type="button">Позвать родителя</button>
+          <button class="ghost-btn" id="continueGuestBtn" type="button">Продолжить знакомство</button>
+          <button class="ghost-btn" id="profileHowBtn" type="button">Как создать профиль</button>
+        </div>
+      </section>
+
+      <div class="video-modal" id="videoModal" hidden>
+        <div class="video-card" role="dialog" aria-modal="true" aria-labelledby="videoTitle">
+          <button class="close-btn" id="closeVideoBtn" type="button" aria-label="Закрыть">×</button>
+          <h2 id="videoTitle">Как работает Mama Ai</h2>
+          <div class="guide-slides" id="guideSlides" aria-live="polite"></div>
+          <div class="guide-controls">
+            <button class="ghost-btn" id="guidePrevBtn" type="button">Назад</button>
+            <button class="ghost-btn" id="guideNextBtn" type="button">Далее</button>
+            <button class="primary-btn" id="guideTryBtn" type="button">Попробовать сейчас</button>
+          </div>
+          <ol class="text-guide">
+            <li>Нажми «Попробовать бесплатно».</li>
+            <li>Выбери класс, язык и предмет.</li>
+            <li>Задай вопрос или выбери задание.</li>
+            <li>Получи понятное объяснение.</li>
+            <li>Выполни задание и заработай баллы.</li>
+            <li>Попроси родителя создать профиль, чтобы сохранить прогресс.</li>
+          </ol>
+        </div>
+      </div>
+
       <section class="topbar">
         <div>
           <p class="eyebrow" data-i18n="schoolCompanion">AI-компаньон по школьной программе</p>
@@ -94,7 +162,7 @@
         </div>
       </section>
 
-      <section class="profile-panel" id="profile">
+      <section class="profile-panel adult-panel" id="profile">
         <div class="panel-heading">
           <div>
             <p class="eyebrow" data-i18n="studentProfile">Профиль ученика</p>
@@ -105,7 +173,7 @@
         <div class="control-grid">
           <label>
             <span data-i18n="student">Ученик</span>
-            <input id="studentName" type="text" value="Аружан" />
+            <input id="studentName" type="text" value="" placeholder="Имя родителя или ребёнка" />
           </label>
           <label>
             <span>Город</span>
@@ -113,7 +181,7 @@
           </label>
           <label>
             <span>Email</span>
-            <input id="userEmail" type="email" value="gulmirau1979@gmail.com" placeholder="name@example.com" />
+            <input id="userEmail" type="email" value="" placeholder="name@example.com" />
           </label>
           <label>
             <span>Пароль</span>
@@ -174,7 +242,7 @@
           </label>
         </div>
         <div class="auth-actions">
-          <button class="primary-btn" id="registerBtn" type="button">Зарегистрироваться</button>
+          <button class="primary-btn" id="registerBtn" type="button">Создать кабинет</button>
           <button class="ghost-btn" id="loginBtn" type="button">Войти</button>
           <span id="authMessage" class="auth-message">Для общего кабинета подключите Supabase.</span>
         </div>
@@ -197,6 +265,19 @@
           <article>
             <strong>Кабинет родителя</strong>
             <p id="parentCabinetText">Родитель увидит темы, слабые места и рекомендации.</p>
+            <div class="add-child-form">
+              <input id="newChildName" type="text" placeholder="Имя ребёнка" autocomplete="off" />
+              <select id="newChildGrade" aria-label="Класс ребёнка"></select>
+              <select id="newChildLanguage" aria-label="Язык обучения ребёнка">
+                <option value="ru">Русский</option>
+                <option value="kk">Қазақша</option>
+                <option value="en">English</option>
+              </select>
+              <input id="newChildCity" type="text" placeholder="Город (необязательно)" autocomplete="off" />
+              <input id="newChildSchool" type="text" placeholder="Школа (необязательно)" autocomplete="off" />
+              <button class="primary-btn" id="createChildBtn" type="button">Добавить ребёнка</button>
+            </div>
+            <div class="child-card-list" id="childCardList"></div>
             <div class="child-link-form">
               <input id="childCodeInput" type="text" placeholder="Код ребёнка" autocomplete="off" />
               <button class="ghost-btn" id="linkChildBtn" type="button">Привязать</button>

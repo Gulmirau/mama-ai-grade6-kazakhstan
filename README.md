@@ -8,10 +8,16 @@ This project is still not a full production platform: AI tutoring, OCR, RAG, clo
 
 The app now has a Supabase-ready MVP path for real accounts and shared analytics:
 
-- email/password registration and login for student, parent, and teacher;
+- child-first landing screen with no registration form at launch;
+- guest learning mode with 3 free trial actions saved only in localStorage;
+- adult registration for parent or teacher, with admin assigned only by owner email;
+- parent-created child profiles without child email/password;
+- personal child cabinet links backed by Supabase RPC and hashed tokens;
+- email/password registration and login for parent and teacher; children use parent-created child links;
 - admin is not selectable in the UI and is assigned only by the owner email in `config.js`;
 - city, class, language, role, events, quiz attempts, progress, and feedback can be saved to Supabase;
 - Row Level Security migration is provided in `supabase/migrations/202608100001_mvp_auth_rls.sql`;
+- child profile/link migration is provided in `supabase/migrations/202608120001_child_guest_and_invites.sql`;
 - setup instructions for Gulmira are in `SETUP_FOR_GULMIRA.md`.
 
 GitHub Pages will remain in local/static mode until `SUPABASE_URL` and `SUPABASE_ANON_KEY` are filled in `config.js` and the migration is run in Supabase. Never put service role keys or OpenAI API keys into public files.

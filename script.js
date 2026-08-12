@@ -695,6 +695,13 @@ let lastAnswerText = "";
 let recognition = null;
 let clockTimer = null;
 let birdAudio = null;
+const GUEST_ACTION_LIMIT = 3;
+const guestStorageKey = "mamaAiGuestState";
+const childSessionStorageKey = "mamaAiChildSession";
+let appAccessMode = "landing";
+let guestState = loadGuestState();
+let childSession = null;
+let guideSlideIndex = 0;
 
 const gradeSelect = document.getElementById("gradeSelect");
 const modeSelect = document.getElementById("modeSelect");
@@ -756,8 +763,288 @@ const lifecycleEmailStatus = document.getElementById("lifecycleEmailStatus");
 const adminAccessText = document.getElementById("adminAccessText");
 const adminStudentRows = document.getElementById("adminStudentRows");
 const inactiveStudentList = document.getElementById("inactiveStudentList");
+const landingPanel = document.getElementById("landing");
+const guestStartBtn = document.getElementById("guestStartBtn");
+const videoGuideBtn = document.getElementById("videoGuideBtn");
+const adultLoginLink = document.getElementById("adultLoginLink");
+const guestStatusPanel = document.getElementById("guestStatusPanel");
+const guestActionsLeft = document.getElementById("guestActionsLeft");
+const guestLimitPanel = document.getElementById("guestLimitPanel");
+const callParentBtn = document.getElementById("callParentBtn");
+const continueGuestBtn = document.getElementById("continueGuestBtn");
+const profileHowBtn = document.getElementById("profileHowBtn");
+const videoModal = document.getElementById("videoModal");
+const closeVideoBtn = document.getElementById("closeVideoBtn");
+const guideSlides = document.getElementById("guideSlides");
+const guidePrevBtn = document.getElementById("guidePrevBtn");
+const guideNextBtn = document.getElementById("guideNextBtn");
+const guideTryBtn = document.getElementById("guideTryBtn");
+const newChildName = document.getElementById("newChildName");
+const newChildGrade = document.getElementById("newChildGrade");
+const newChildLanguage = document.getElementById("newChildLanguage");
+const newChildCity = document.getElementById("newChildCity");
+const newChildSchool = document.getElementById("newChildSchool");
+const createChildBtn = document.getElementById("createChildBtn");
+const childCardList = document.getElementById("childCardList");
 
 init();
+
+function loadGuestState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(guestStorageKey) || "null");
+    return {
+      actionsUsed: Number(saved?.actionsUsed || 0),
+      points: Number(saved?.points || localStorage.getItem("mamaAiGuestPoints") || 0),
+      grade: Number(saved?.grade || localStorage.getItem("mamaAiGrade") || 6),
+      subjectKey: saved?.subjectKey || "math",
+      learningLanguage: saved?.learningLanguage || localStorage.getItem("mamaAiLearningLang") || "ru",
+      limited: Boolean(saved?.limited)
+    };
+  } catch {
+    return { actionsUsed: 0, points: 0, grade: 6, subjectKey: "math", learningLanguage: "ru", limited: false };
+  }
+}
+
+function saveGuestState() {
+  guestState.grade = currentGrade;
+  guestState.subjectKey = currentSubjectKey;
+  guestState.learningLanguage = currentLang;
+  guestState.points = points;
+  localStorage.setItem(guestStorageKey, JSON.stringify(guestState));
+  localStorage.setItem("mamaAiGuestPoints", String(guestState.points));
+}
+
+function setAccessMode(mode) {
+  appAccessMode = mode;
+  document.body.classList.toggle("landing-active", mode === "landing");
+  document.body.classList.toggle("guest-mode", mode === "guest");
+  document.body.classList.toggle("adult-mode", mode === "adult");
+  document.body.classList.toggle("child-mode", mode === "child");
+  if (landingPanel) landingPanel.hidden = mode !== "landing";
+  updateGuestPanel();
+}
+
+function updateGuestPanel() {
+  if (!guestStatusPanel || !guestActionsLeft) return;
+  const isGuest = appAccessMode === "guest";
+  guestStatusPanel.hidden = !isGuest;
+  if (!isGuest) return;
+  const left = Math.max(0, GUEST_ACTION_LIMIT - guestState.actionsUsed);
+  guestActionsLeft.textContent = left > 0
+    ? `Можно попробовать ещё ${left} задания`
+    : "Пробный лимит закончился. Родитель может создать профиль и сохранить прогресс.";
+}
+
+function showGuestLimit() {
+  guestState.limited = true;
+  saveGuestState();
+  updateGuestPanel();
+  if (guestLimitPanel) guestLimitPanel.hidden = false;
+}
+
+function consumeGuestAction(pointsDelta = 0) {
+  if (appAccessMode !== "guest") return true;
+  if (guestState.actionsUsed >= GUEST_ACTION_LIMIT) {
+    showGuestLimit();
+    return false;
+  }
+  guestState.actionsUsed += 1;
+  guestState.points = Math.max(0, Number(guestState.points || 0) + Number(pointsDelta || 0));
+  saveGuestState();
+  updateGuestPanel();
+  if (guestState.actionsUsed >= GUEST_ACTION_LIMIT) showGuestLimit();
+  return true;
+}
+
+function getGuestProgressPayload() {
+  return {
+    actionsUsed: guestState.actionsUsed,
+    points: Math.max(points, guestState.points || 0),
+    grade: currentGrade,
+    subjectKey: currentSubjectKey,
+    learningLanguage: currentLang,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function startGuestMode() {
+  currentGrade = Number(guestState.grade || currentGrade || 6);
+  currentLang = guestState.learningLanguage || currentLang || "ru";
+  points = Math.max(Number(points || 0), Number(guestState.points || 0));
+  localStorage.setItem("mamaAiGrade", String(currentGrade));
+  localStorage.setItem("mamaAiLearningLang", currentLang);
+  if (gradeSelect) gradeSelect.value = String(currentGrade);
+  if (learningLanguageSelect) learningLanguageSelect.value = currentLang;
+  setAccessMode("guest");
+  renderAll();
+  addMessage("bot success", "Можно попробовать Mama Ai бесплатно: выбери класс, предмет и задай вопрос. Я объясню по шагам, как терпеливый репетитор.");
+}
+
+function openAdultMode() {
+  if (roleSelect && roleSelect.value === "student") roleSelect.value = "parent";
+  setAccessMode("adult");
+  if (guestLimitPanel) guestLimitPanel.hidden = true;
+  document.getElementById("profile")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+const guideSlidesData = [
+  { title: "1. Начало без регистрации", body: "Ребёнок нажимает «Попробовать бесплатно» и сразу попадает в учебный режим." },
+  { title: "2. Выбор класса", body: "Mama Ai подстраивает объяснение под 1–11 класс: младшим проще, старшим глубже." },
+  { title: "3. Предмет и тема", body: "Можно выбрать школьный предмет, мини-тест, СОР, СОЧ или подготовку к ЕНТ там, где это подходит классу." },
+  { title: "4. Объяснение по шагам", body: "AI не даёт только ответ, а спрашивает, подсказывает и ведёт ребёнка через ход решения." },
+  { title: "5. Баллы и похвала", body: "За попытку, старание и правильный ответ ребёнок получает баллы и спокойную награду." },
+  { title: "6. Родительский кабинет", body: "Родитель создаёт профиль ребёнка, получает личную ссылку и видит прогресс только своих детей." }
+];
+
+function renderGuideSlide() {
+  if (!guideSlides) return;
+  const slide = guideSlidesData[guideSlideIndex] || guideSlidesData[0];
+  guideSlides.innerHTML = `<article class="guide-slide"><span>${guideSlideIndex + 1}/${guideSlidesData.length}</span><h3>${slide.title}</h3><p>${slide.body}</p></article>`;
+  if (guidePrevBtn) guidePrevBtn.disabled = guideSlideIndex === 0;
+  if (guideNextBtn) guideNextBtn.disabled = guideSlideIndex === guideSlidesData.length - 1;
+}
+
+function openGuideModal() {
+  guideSlideIndex = 0;
+  renderGuideSlide();
+  if (videoModal) videoModal.hidden = false;
+}
+
+function closeGuideModal() {
+  if (videoModal) videoModal.hidden = true;
+}
+
+function fillChildGradeOptions() {
+  if (!newChildGrade) return;
+  newChildGrade.innerHTML = "";
+  for (let grade = 1; grade <= 11; grade += 1) {
+    const option = document.createElement("option");
+    option.value = String(grade);
+    option.textContent = `${grade} класс`;
+    newChildGrade.appendChild(option);
+  }
+  newChildGrade.value = String(currentGrade || 6);
+}
+
+function getChildInviteUrl(token) {
+  const base = window.MamaAiSupabase?.getRedirectUrl?.() || `${window.location.origin}${window.location.pathname}`;
+  const url = new URL(base, window.location.href);
+  url.searchParams.set("child", token);
+  return url.toString();
+}
+
+function renderChildCard(child) {
+  if (!childCardList || !child) return;
+  const link = child.invite_token ? getChildInviteUrl(child.invite_token) : "";
+  const card = document.createElement("article");
+  card.className = "child-share-card";
+  card.dataset.childId = child.child_id || child.id || "";
+  card.innerHTML = `
+    <h4>${child.display_name || "Ребёнок"}</h4>
+    <p>${child.grade || currentGrade} класс · ${(child.learning_language || currentLang || "ru").toUpperCase()}</p>
+    ${link ? `<input readonly value="${link}" aria-label="Личная ссылка ребёнка" />` : ""}
+    <div class="feedback-actions">
+      ${link ? `<button type="button" class="ghost-btn copy-child-link">Копировать ссылку</button>` : ""}
+      ${link ? `<a class="ghost-btn whatsapp-link" href="https://wa.me/?text=${encodeURIComponent(link)}" target="_blank" rel="noreferrer">WhatsApp</a>` : ""}
+      <button type="button" class="ghost-btn rotate-child-link">Обновить ссылку</button>
+      <button type="button" class="ghost-btn revoke-child-link">Отключить</button>
+    </div>
+    <p class="parent-note child-card-status"></p>
+  `;
+  childCardList.prepend(card);
+}
+
+async function createChildProfile() {
+  if (!window.MamaAiSupabase?.isConfigured?.()) {
+    if (childCardList) childCardList.innerHTML = `<p class="parent-note">Supabase ещё не подключён на этой странице. Сначала нужен вход родителя.</p>`;
+    return;
+  }
+  if (!cloudProfile || !["parent", "admin"].includes(cloudProfile.role)) {
+    setAuthMessage("Сначала войдите как родитель. Детский профиль создаётся взрослым, без email и пароля ребёнка.", true);
+    return;
+  }
+  const childName = newChildName?.value.trim();
+  if (!childName) {
+    setAuthMessage("Введите имя ребёнка для детского кабинета.", true);
+    return;
+  }
+  try {
+    setAuthMessage("Создаю детский кабинет и личную ссылку...");
+    const child = await window.MamaAiSupabase.createChildProfile({
+      name: childName,
+      grade: Number(newChildGrade?.value || currentGrade || 6),
+      learningLanguage: newChildLanguage?.value || currentLang || "ru",
+      city: newChildCity?.value.trim() || studentCity?.value.trim() || "",
+      school: newChildSchool?.value.trim() || "",
+      guestProgress: getGuestProgressPayload()
+    });
+    renderChildCard(child);
+    setAuthMessage("Детский кабинет создан. Ссылку можно скопировать и отправить ребёнку.");
+  } catch (error) {
+    setAuthMessage(`Не удалось создать детский кабинет: ${error.message}`, true);
+  }
+}
+
+async function activateChildFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("child");
+  if (!token || !window.MamaAiSupabase?.isConfigured?.()) return false;
+  try {
+    childSession = await window.MamaAiSupabase.activateChildInvite(token);
+    localStorage.setItem(childSessionStorageKey, JSON.stringify({ sessionToken: childSession.session_token }));
+    window.history.replaceState({}, document.title, `${window.location.origin}${window.location.pathname}`);
+    applyChildSession(childSession);
+    return true;
+  } catch {
+    localStorage.removeItem(childSessionStorageKey);
+    return false;
+  }
+}
+
+async function restoreChildSession() {
+  if (!window.MamaAiSupabase?.isConfigured?.()) return false;
+  try {
+    const saved = JSON.parse(localStorage.getItem(childSessionStorageKey) || "null");
+    if (!saved?.sessionToken) return false;
+    childSession = await window.MamaAiSupabase.getChildSession(saved.sessionToken);
+    childSession.session_token = saved.sessionToken;
+    applyChildSession(childSession);
+    return true;
+  } catch {
+    localStorage.removeItem(childSessionStorageKey);
+    childSession = null;
+    return false;
+  }
+}
+
+function applyChildSession(session) {
+  if (!session) return;
+  currentGrade = Number(session.grade || currentGrade || 6);
+  currentLang = session.learning_language || currentLang || "ru";
+  points = Number(session.points || points || 0);
+  if (studentName) studentName.value = session.display_name || "Ученик";
+  if (gradeSelect) gradeSelect.value = String(currentGrade);
+  if (learningLanguageSelect) learningLanguageSelect.value = currentLang;
+  localStorage.setItem("mamaAiGrade", String(currentGrade));
+  localStorage.setItem("mamaAiLearningLang", currentLang);
+  setAccessMode("child");
+}
+
+async function saveChildProgress(pointsDelta, actionType, payload = {}) {
+  if (!childSession?.session_token || !window.MamaAiSupabase?.isConfigured?.()) return;
+  try {
+    await window.MamaAiSupabase.saveChildProgress({
+      sessionToken: childSession.session_token,
+      subjectKey: currentSubjectKey,
+      topic: currentSubject()?.topics?.[0] || "",
+      pointsDelta,
+      actionType,
+      payload
+    });
+  } catch {
+    // Child progress remains visible locally even if a temporary network error happens.
+  }
+}
 
 async function init() {
   analytics.visits += 1;
@@ -772,10 +1059,20 @@ async function init() {
   if (authProviderSelect) authProviderSelect.value = localStorage.getItem("mamaAiAuthProvider") || "email";
   trackLocalCity();
   fillGrades();
+  fillChildGradeOptions();
   bindEvents();
   applyTranslations();
-  await restoreCloudSession();
-  await initServerSession();
+  const childFromLink = await activateChildFromUrl();
+  const childRestored = childFromLink || await restoreChildSession();
+  if (!childRestored) {
+    await restoreCloudSession();
+    if (cloudProfile) {
+      setAccessMode("adult");
+      await initServerSession();
+    } else {
+      setAccessMode("landing");
+    }
+  }
   renderAll();
   saveAnalytics();
 }
@@ -792,13 +1089,14 @@ function fillGrades() {
 }
 
 function getAuthForm() {
+  const selectedRole = roleSelect.value === "teacher" ? "teacher" : "parent";
   return {
-    name: studentName.value.trim() || "Ученик",
+    name: studentName.value.trim() || "Родитель",
     email: userEmail?.value.trim() || "",
     password: userPassword?.value || "",
     city: studentCity?.value.trim() || "Алматы",
     grade: currentGrade,
-    role: roleSelect.value,
+    role: selectedRole,
     interfaceLanguage: uiLang,
     learningLanguage: currentLang,
     selectedSubjects: getSubjectNamesByGrade(currentGrade)
@@ -863,6 +1161,7 @@ async function registerCloudAccount() {
       return;
     }
     applyCloudProfile(result.profile);
+    setAccessMode("adult");
     await syncServerState();
     renderAll();
   } catch (error) {
@@ -884,6 +1183,7 @@ async function loginCloudAccount() {
     setAuthMessage("Вхожу в кабинет...");
     const result = await window.MamaAiSupabase.signIn(form.email, form.password, form);
     applyCloudProfile(result.profile);
+    setAccessMode("adult");
     await syncServerState();
     renderAll();
   } catch (error) {
@@ -1310,6 +1610,7 @@ function bindEvents() {
   learningLanguageSelect.addEventListener("change", () => {
     currentLang = learningLanguageSelect.value;
     localStorage.setItem("mamaAiLearningLang", currentLang);
+    if (appAccessMode === "guest") saveGuestState();
     applyTranslations();
     addMessage("bot success", getLanguageMessage());
   });
@@ -1345,12 +1646,69 @@ function bindEvents() {
 
   natureSoundBtn.addEventListener("click", toggleNatureSound);
 
+  if (guestStartBtn) guestStartBtn.addEventListener("click", startGuestMode);
+  if (adultLoginLink) adultLoginLink.addEventListener("click", openAdultMode);
+  if (videoGuideBtn) videoGuideBtn.addEventListener("click", openGuideModal);
+  if (profileHowBtn) profileHowBtn.addEventListener("click", openGuideModal);
+  if (closeVideoBtn) closeVideoBtn.addEventListener("click", closeGuideModal);
+  if (guidePrevBtn) guidePrevBtn.addEventListener("click", () => {
+    guideSlideIndex = Math.max(0, guideSlideIndex - 1);
+    renderGuideSlide();
+  });
+  if (guideNextBtn) guideNextBtn.addEventListener("click", () => {
+    guideSlideIndex = Math.min(guideSlidesData.length - 1, guideSlideIndex + 1);
+    renderGuideSlide();
+  });
+  if (guideTryBtn) guideTryBtn.addEventListener("click", () => {
+    closeGuideModal();
+    startGuestMode();
+  });
+  if (callParentBtn) callParentBtn.addEventListener("click", openAdultMode);
+  if (continueGuestBtn) continueGuestBtn.addEventListener("click", () => {
+    if (guestLimitPanel) guestLimitPanel.hidden = true;
+    addMessage("bot", "Можно дальше смотреть темы и предметы. Чтобы я сохраняла новые ответы и баллы, попроси родителя создать профиль.");
+  });
+  if (createChildBtn) createChildBtn.addEventListener("click", createChildProfile);
+  if (childCardList) {
+    childCardList.addEventListener("click", async (event) => {
+      const card = event.target.closest(".child-share-card");
+      if (!card) return;
+      const status = card.querySelector(".child-card-status");
+      if (event.target.closest(".copy-child-link")) {
+        const input = card.querySelector("input");
+        if (input?.value) {
+          await navigator.clipboard?.writeText(input.value);
+          if (status) status.textContent = "Ссылка скопирована.";
+        }
+      }
+      if (event.target.closest(".rotate-child-link")) {
+        try {
+          const rotated = await window.MamaAiSupabase.rotateChildInvite(card.dataset.childId);
+          const input = card.querySelector("input");
+          if (input && rotated?.invite_token) input.value = getChildInviteUrl(rotated.invite_token);
+          if (status) status.textContent = "Ссылка обновлена. Старая больше не работает.";
+        } catch (error) {
+          if (status) status.textContent = `Не удалось обновить ссылку: ${error.message}`;
+        }
+      }
+      if (event.target.closest(".revoke-child-link")) {
+        try {
+          await window.MamaAiSupabase.revokeChildInvite(card.dataset.childId);
+          if (status) status.textContent = "Детская ссылка отключена.";
+        } catch (error) {
+          if (status) status.textContent = `Не удалось отключить ссылку: ${error.message}`;
+        }
+      }
+    });
+  }
+
   speakBtn.addEventListener("click", speakLastAnswer);
   voiceBtn.addEventListener("click", startVoiceInput);
 
   gradeSelect.addEventListener("change", () => {
     currentGrade = Number(gradeSelect.value);
     localStorage.setItem("mamaAiGrade", currentGrade);
+    if (appAccessMode === "guest") saveGuestState();
     currentSubjectKey = getSubjectsForGrade()[0].key;
     recordEvent("Смена класса", `${currentGrade} класс`);
     initServerSession();
@@ -1450,8 +1808,11 @@ function bindEvents() {
   document.getElementById("logoutBtn").addEventListener("click", async () => {
     if (window.MamaAiSupabase?.isConfigured?.()) await window.MamaAiSupabase.signOut();
     cloudProfile = null;
+    childSession = null;
     apiToken = "";
     localStorage.removeItem("mamaAiApiToken");
+    localStorage.removeItem(childSessionStorageKey);
+    setAccessMode("landing");
     setAuthMessage("Вы вышли из кабинета.");
     recordEvent("Выход", studentName.value.trim() || "Ученик");
     addMessage("bot", "Сессия завершена. Можно снова выбрать роль и продолжить работу.");
@@ -1541,6 +1902,7 @@ function renderSubjects() {
     button.innerHTML = `<span class="subject-icon">${subject.icon}</span><strong>${subjectLabel(subject.title)}</strong><small>${subject.tags}</small>`;
     button.addEventListener("click", () => {
       currentSubjectKey = subject.key;
+      if (appAccessMode === "guest") saveGuestState();
       recordEvent("Выбор предмета", `${currentGrade} класс: ${subject.title}`);
       renderSubjects();
       renderMaterials();
@@ -1700,6 +2062,18 @@ function getProgressValue(key, index, title = "") {
 
 async function renderAccountAndParent() {
   const subject = currentSubject();
+  if (appAccessMode === "child" && childSession) {
+    if (studentCabinetText) {
+      studentCabinetText.textContent = `${childSession.display_name || "Ученик"}: ${currentGrade} класс, язык ${(currentLang || "ru").toUpperCase()}, ${subjectLabel(subject.title)}, ${points} баллов.`;
+    }
+    if (parentCabinetText) {
+      parentCabinetText.textContent = "Это детский кабинет. Родитель видит подробный прогресс в своём взрослом кабинете.";
+    }
+    if (currentTopicInsight) currentTopicInsight.textContent = `${subjectLabel(subject.title)}: ${subject.topics[0]}`;
+    renderParentSummary(makeLocalParentSummary());
+    renderWeeklyPlan(makeLocalPlan());
+    return;
+  }
   if (studentCabinetText) {
     const city = cloudProfile?.city || studentCity?.value.trim() || serverStudent?.city || "Алматы";
     const profileName = cloudProfile?.first_name || studentName.value || "Ученик";
@@ -1897,6 +2271,10 @@ function renderQuiz() {
 async function sendMessage() {
   const text = userInput.value.trim();
   if (!text) return;
+  if (!consumeGuestAction(2)) {
+    addMessage("bot", "Пробные задания закончились. Можно смотреть предметы дальше, а для новых сохранённых ответов попроси родителя создать профиль.");
+    return;
+  }
 
   addMessage("user", text);
   userInput.value = "";
@@ -1930,10 +2308,14 @@ async function sendMessage() {
     serverOnline = true;
     updateProfileNote();
     renderScore();
+    saveGuestState();
+    saveChildProgress(2, "question", { question: text, subject: subject.key });
     syncServerState();
   } catch {
     serverOnline = false;
     replaceLastBotMessage(makeAnswer(text));
+    saveGuestState();
+    saveChildProgress(2, "question", { question: text, subject: currentSubject().key });
     updateProfileNote();
   }
 }
@@ -2160,6 +2542,10 @@ function getLanguageMessage() {
 }
 
 function checkQuizAnswer(button) {
+  if (!consumeGuestAction(1)) {
+    quizResult.textContent = "Пробный лимит закончился. Попроси родителя создать профиль, чтобы продолжить с сохранением баллов.";
+    return;
+  }
   const isCorrect = button.dataset.correct === "true";
   awardPoints(1, "попытку в мини-тесте");
   answerGrid.querySelectorAll("button").forEach((item) => {
@@ -2186,6 +2572,8 @@ function checkQuizAnswer(button) {
   }
 
   localStorage.setItem("mamaAiPoints", points);
+  saveGuestState();
+  saveChildProgress(isCorrect ? 11 : 1, isCorrect ? "quiz_correct" : "quiz_wrong", { subject: currentSubject().key });
   saveAnalytics();
   renderScore();
   renderAnalytics();

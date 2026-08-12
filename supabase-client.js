@@ -283,6 +283,79 @@
     return rows?.[0] || null;
   }
 
+  async function createChildProfile(form) {
+    const session = getSession();
+    if (!session?.user?.id || !isConfigured()) throw new Error("login_required");
+    const rows = await request("/rest/v1/rpc/create_child_profile", {
+      method: "POST",
+      body: JSON.stringify({
+        child_name: form.name,
+        child_grade: Number(form.grade || 6),
+        child_language: form.learningLanguage || "ru",
+        child_city: form.city || "",
+        child_school: form.school || "",
+        guest_progress: form.guestProgress || {}
+      })
+    });
+    await recordEvent("child_profile_created", "Parent created a child cabinet");
+    return rows?.[0] || null;
+  }
+
+  async function rotateChildInvite(childId) {
+    const session = getSession();
+    if (!session?.user?.id || !isConfigured()) throw new Error("login_required");
+    const rows = await request("/rest/v1/rpc/rotate_child_invite", {
+      method: "POST",
+      body: JSON.stringify({ target_child_id: childId })
+    });
+    await recordEvent("child_invite_rotated", "Parent rotated a child link");
+    return rows?.[0] || null;
+  }
+
+  async function revokeChildInvite(childId) {
+    const session = getSession();
+    if (!session?.user?.id || !isConfigured()) throw new Error("login_required");
+    const result = await request("/rest/v1/rpc/revoke_child_invite", {
+      method: "POST",
+      body: JSON.stringify({ target_child_id: childId })
+    });
+    await recordEvent("child_invite_revoked", "Parent revoked a child link");
+    return result;
+  }
+
+  async function activateChildInvite(inviteToken) {
+    if (!isConfigured()) throw new Error("supabase_not_configured");
+    const rows = await request("/rest/v1/rpc/activate_child_invite", {
+      method: "POST",
+      body: JSON.stringify({ raw_token: inviteToken })
+    });
+    return rows?.[0] || null;
+  }
+
+  async function getChildSession(sessionToken) {
+    if (!isConfigured()) throw new Error("supabase_not_configured");
+    const rows = await request("/rest/v1/rpc/get_child_session", {
+      method: "POST",
+      body: JSON.stringify({ raw_session: sessionToken })
+    });
+    return rows?.[0] || null;
+  }
+
+  async function saveChildProgress(payload) {
+    if (!isConfigured()) return null;
+    return request("/rest/v1/rpc/save_child_progress", {
+      method: "POST",
+      body: JSON.stringify({
+        raw_session: payload.sessionToken,
+        subject_key: payload.subjectKey || "",
+        topic: payload.topic || "",
+        points_delta: Number(payload.pointsDelta || 0),
+        action_type: payload.actionType || "learning_action",
+        payload: payload.payload || {}
+      })
+    });
+  }
+
   async function getAnalytics() {
     const [profiles, events, attempts, feedbackRows] = await Promise.all([
       request("/rest/v1/profiles?select=id,role,grade,city,status,last_active_at,created_at"),
@@ -308,6 +381,12 @@
     saveProgress,
     saveFeedback,
     linkChildByCode,
+    createChildProfile,
+    rotateChildInvite,
+    revokeChildInvite,
+    activateChildInvite,
+    getChildSession,
+    saveChildProgress,
     getAnalytics
   };
 })();

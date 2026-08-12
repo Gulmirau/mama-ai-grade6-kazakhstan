@@ -1,12 +1,24 @@
 # Mama AI Project Status
 
-Last updated: 2026-08-11
+Last updated: 2026-08-12
 
 ## Summary
 
 Supabase is connected in the public GitHub Pages build. The site no longer runs in `setup_required` mode. Public registration UI is available, admin is not self-selectable, and the frontend uses only the Supabase publishable/anon key.
 
 Important audit note: the automated signup check on 2026-08-11 was blocked by Supabase email rate limiting after repeated test registrations. Earlier public UI signup reached Supabase Auth and returned the expected email-confirmation flow. Direct confirmation of `auth.users` and `public.profiles` rows requires either a confirmed test email session or viewing the Supabase dashboard.
+
+## 2026-08-12 Child-First Redesign
+
+- The first screen is now child-friendly: no registration form at launch, only free trial, guide, language switch, and a small adult login link.
+- Guest mode allows 3 trial learning actions by default and stores only local guest state: grade, subject, language, actions, and points.
+- Adult registration is parent/teacher focused. Children no longer need email/password accounts to start.
+- A parent can create a child cabinet, transfer guest progress, and receive a personal child link.
+- Child links are backed by Supabase RPC functions and hashed tokens in the database. The raw link token is not stored in public tables.
+- The child cabinet hides email, password, admin, and Supabase technical details.
+- Interactive guide is available in the app; MP4 production script and VTT captions are prepared in `docs/` and `public_assets/`.
+
+Important: apply `supabase/migrations/202608120001_child_guest_and_invites.sql` in Supabase SQL editor before real parent-created child links work publicly.
 
 ## Module Status
 

@@ -6,11 +6,12 @@
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check script.js && node --check supabase-client.js && node --check official_textbooks.js && node --check scripts/content-audit.js && node --check scripts/static-public-check.js && node --check scripts/mvp-auth-check.js",
+    "check": "node --check server.js && node --check script.js && node --check supabase-client.js && node --check official_textbooks.js && node --check scripts/content-audit.js && node --check scripts/static-public-check.js && node --check scripts/mvp-auth-check.js && node --check scripts/child-first-check.js",
     "content:report": "node scripts/content-audit.js report",
     "content:test": "node scripts/content-audit.js test",
     "public:test": "node scripts/static-public-check.js",
     "mvp:test": "node scripts/mvp-auth-check.js",
+    "child-first:test": "node scripts/child-first-check.js",
     "audit:post-supabase": "node scripts/post-supabase-audit.js"
   },
   "engines": {
