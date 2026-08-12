@@ -702,6 +702,8 @@ let appAccessMode = "landing";
 let guestState = loadGuestState();
 let childSession = null;
 let guideSlideIndex = 0;
+let guidedTourIndex = 0;
+let guidedTourOverlay = null;
 
 const gradeSelect = document.getElementById("gradeSelect");
 const modeSelect = document.getElementById("modeSelect");
@@ -778,6 +780,7 @@ const closeVideoBtn = document.getElementById("closeVideoBtn");
 const guideSlides = document.getElementById("guideSlides");
 const guidePrevBtn = document.getElementById("guidePrevBtn");
 const guideNextBtn = document.getElementById("guideNextBtn");
+const guidedTourBtn = document.getElementById("guidedTourBtn");
 const guideTryBtn = document.getElementById("guideTryBtn");
 const newChildName = document.getElementById("newChildName");
 const newChildGrade = document.getElementById("newChildGrade");
@@ -867,7 +870,7 @@ function getGuestProgressPayload() {
   };
 }
 
-function startGuestMode() {
+function startGuestMode(silent = false) {
   currentGrade = Number(guestState.grade || currentGrade || 6);
   currentLang = guestState.learningLanguage || currentLang || "ru";
   points = Math.max(Number(points || 0), Number(guestState.points || 0));
@@ -877,7 +880,7 @@ function startGuestMode() {
   if (learningLanguageSelect) learningLanguageSelect.value = currentLang;
   setAccessMode("guest");
   renderAll();
-  addMessage("bot success", "Можно попробовать Mama Ai бесплатно: выбери класс, предмет и задай вопрос. Я объясню по шагам, как терпеливый репетитор.");
+  if (!silent) addMessage("bot success", "Можно попробовать Mama Ai бесплатно: выбери класс, предмет и задай вопрос. Я объясню по шагам, как терпеливый репетитор.");
 }
 
 function openAdultMode() {
@@ -912,6 +915,137 @@ function openGuideModal() {
 
 function closeGuideModal() {
   if (videoModal) videoModal.hidden = true;
+}
+
+const guidedTourSteps = [
+  {
+    selector: "#guestStartBtn",
+    text: "Сначала нажимаем кнопку Попробовать бесплатно. Ребёнок может начать без регистрации.",
+    before: () => setAccessMode("landing")
+  },
+  {
+    selector: "#gradeSelect",
+    text: "Здесь выбираем класс ребёнка: первый, третий, шестой или любой до одиннадцатого.",
+    before: () => startGuestMode(true)
+  },
+  {
+    selector: "#learningLanguageSelect",
+    text: "Здесь выбираем язык обучения. Mama AI будет отвечать на этом языке.",
+    before: () => startGuestMode(true)
+  },
+  {
+    selector: "#learn",
+    text: "После выбора класса появляются предметы именно для этого класса. Можно нажать нужный предмет.",
+    before: () => startGuestMode(true)
+  },
+  {
+    selector: "#userInput",
+    text: "Сюда ребёнок пишет вопрос или задание. Mama AI объясняет решение по шагам, не просто даёт ответ.",
+    before: () => startGuestMode(true)
+  },
+  {
+    selector: "#adultLoginLink",
+    text: "Если нужно сохранить прогресс, родитель нажимает вход для родителей и учителей.",
+    before: () => setAccessMode("landing")
+  },
+  {
+    selector: "#registerBtn",
+    text: "Здесь взрослый создаёт кабинет родителя или учителя через email и пароль.",
+    before: () => openAdultMode()
+  },
+  {
+    selector: "#createChildBtn",
+    text: "После входа родитель добавляет ребёнка и получает личную ссылку для детского кабинета.",
+    before: () => openAdultMode()
+  }
+];
+
+function speakTourText(text) {
+  if (!soundEnabled || !("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "ru-RU";
+  utterance.rate = 0.9;
+  utterance.pitch = 1.05;
+  utterance.volume = 0.92;
+  window.speechSynthesis.speak(utterance);
+}
+
+function ensureTourOverlay() {
+  if (guidedTourOverlay) return guidedTourOverlay;
+  guidedTourOverlay = document.createElement("div");
+  guidedTourOverlay.className = "guided-tour-overlay";
+  guidedTourOverlay.innerHTML = `
+    <div class="tour-arrow" aria-hidden="true"></div>
+    <div class="tour-card" role="dialog" aria-live="polite">
+      <strong id="tourStepText"></strong>
+      <div class="tour-actions">
+        <button type="button" class="ghost-btn" id="tourPrevBtn">Назад</button>
+        <button type="button" class="primary-btn" id="tourNextBtn">Дальше</button>
+        <button type="button" class="ghost-btn" id="tourCloseBtn">Закрыть</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(guidedTourOverlay);
+  guidedTourOverlay.querySelector("#tourPrevBtn").addEventListener("click", () => {
+    guidedTourIndex = Math.max(0, guidedTourIndex - 1);
+    showGuidedTourStep();
+  });
+  guidedTourOverlay.querySelector("#tourNextBtn").addEventListener("click", () => {
+    if (guidedTourIndex >= guidedTourSteps.length - 1) {
+      closeGuidedTour();
+      return;
+    }
+    guidedTourIndex += 1;
+    showGuidedTourStep();
+  });
+  guidedTourOverlay.querySelector("#tourCloseBtn").addEventListener("click", closeGuidedTour);
+  return guidedTourOverlay;
+}
+
+function showGuidedTourStep() {
+  const step = guidedTourSteps[guidedTourIndex];
+  if (!step) return closeGuidedTour();
+  if (typeof step.before === "function") step.before();
+  const overlay = ensureTourOverlay();
+  const target = document.querySelector(step.selector);
+  if (!target) return;
+  target.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+  window.setTimeout(() => {
+    const rect = target.getBoundingClientRect();
+    target.classList.add("tour-highlight");
+    document.querySelectorAll(".tour-highlight").forEach((item) => {
+      if (item !== target) item.classList.remove("tour-highlight");
+    });
+    const card = overlay.querySelector(".tour-card");
+    const arrow = overlay.querySelector(".tour-arrow");
+    const text = overlay.querySelector("#tourStepText");
+    const next = overlay.querySelector("#tourNextBtn");
+    const prev = overlay.querySelector("#tourPrevBtn");
+    text.textContent = step.text;
+    prev.disabled = guidedTourIndex === 0;
+    next.textContent = guidedTourIndex >= guidedTourSteps.length - 1 ? "Готово" : "Дальше";
+    const top = Math.min(window.innerHeight - 190, Math.max(18, rect.bottom + 16));
+    const left = Math.min(window.innerWidth - 340, Math.max(16, rect.left));
+    card.style.top = `${top}px`;
+    card.style.left = `${left}px`;
+    arrow.style.top = `${Math.max(12, rect.top - 22)}px`;
+    arrow.style.left = `${Math.max(20, rect.left + Math.min(rect.width / 2, 80))}px`;
+    overlay.classList.add("show");
+    speakTourText(step.text);
+  }, reducedMotionEnabled ? 0 : 420);
+}
+
+function startGuidedTour() {
+  closeGuideModal();
+  guidedTourIndex = 0;
+  showGuidedTourStep();
+}
+
+function closeGuidedTour() {
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  document.querySelectorAll(".tour-highlight").forEach((item) => item.classList.remove("tour-highlight"));
+  if (guidedTourOverlay) guidedTourOverlay.classList.remove("show");
 }
 
 function fillChildGradeOptions() {
@@ -1659,6 +1793,7 @@ function bindEvents() {
     guideSlideIndex = Math.min(guideSlidesData.length - 1, guideSlideIndex + 1);
     renderGuideSlide();
   });
+  if (guidedTourBtn) guidedTourBtn.addEventListener("click", startGuidedTour);
   if (guideTryBtn) guideTryBtn.addEventListener("click", () => {
     closeGuideModal();
     startGuestMode();
