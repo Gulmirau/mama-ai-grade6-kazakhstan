@@ -15,7 +15,9 @@ const style = read("style.css");
 const supabaseClient = read("supabase-client.js");
 const migration = read("supabase/migrations/202608120001_child_guest_and_invites.sql");
 
-check("landing screen exists", index.includes('id="landing"') && index.includes("Попробовать бесплатно"));
+check("landing screen exists", index.includes('id="landing"') && index.includes("Начать заниматься") && index.includes("Войти"));
+check("guest wizard exists", index.includes('id="guestWizard"') && index.includes("В каком ты классе?") && script.includes("renderGuestWizard"));
+check("help drawer exists", index.includes('id="helpDrawer"') && index.includes("Показать прямо на сайте") && script.includes("openHelpDrawer"));
 check("adult registration is not first screen", index.includes('class="profile-panel adult-panel"') && style.includes("body.landing-active .sidebar"));
 check("guest mode limit exists", script.includes("const GUEST_ACTION_LIMIT = 3") && script.includes("consumeGuestAction"));
 check("guest state uses localStorage only for guest data", script.includes("mamaAiGuestState") && script.includes("mamaAiGuestPoints"));

@@ -704,6 +704,7 @@ let childSession = null;
 let guideSlideIndex = 0;
 let guidedTourIndex = 0;
 let guidedTourOverlay = null;
+let guestWizardStep = 1;
 
 const gradeSelect = document.getElementById("gradeSelect");
 const modeSelect = document.getElementById("modeSelect");
@@ -772,6 +773,23 @@ const adultLoginLink = document.getElementById("adultLoginLink");
 const guestStatusPanel = document.getElementById("guestStatusPanel");
 const guestActionsLeft = document.getElementById("guestActionsLeft");
 const guestLimitPanel = document.getElementById("guestLimitPanel");
+const guestWizard = document.getElementById("guestWizard");
+const guestStepPill = document.getElementById("guestStepPill");
+const guestWizardTitle = document.getElementById("guestWizardTitle");
+const guestWizardHint = document.getElementById("guestWizardHint");
+const guestGradeChoices = document.getElementById("guestGradeChoices");
+const guestSubjectChoices = document.getElementById("guestSubjectChoices");
+const guestActionChoices = document.getElementById("guestActionChoices");
+const actionPhotoBtn = document.getElementById("actionPhotoBtn");
+const actionQuestionBtn = document.getElementById("actionQuestionBtn");
+const guestBackBtn = document.getElementById("guestBackBtn");
+const childHomePanel = document.getElementById("childHomePanel");
+const childHomeTitle = document.getElementById("childHomeTitle");
+const childHomeMeta = document.getElementById("childHomeMeta");
+const childContinueBtn = document.getElementById("childContinueBtn");
+const childHomeworkBtn = document.getElementById("childHomeworkBtn");
+const childQuestionBtn = document.getElementById("childQuestionBtn");
+const childSubjectBtn = document.getElementById("childSubjectBtn");
 const callParentBtn = document.getElementById("callParentBtn");
 const continueGuestBtn = document.getElementById("continueGuestBtn");
 const profileHowBtn = document.getElementById("profileHowBtn");
@@ -789,6 +807,11 @@ const newChildCity = document.getElementById("newChildCity");
 const newChildSchool = document.getElementById("newChildSchool");
 const createChildBtn = document.getElementById("createChildBtn");
 const childCardList = document.getElementById("childCardList");
+const helpFab = document.getElementById("helpFab");
+const helpDrawer = document.getElementById("helpDrawer");
+const closeHelpBtn = document.getElementById("closeHelpBtn");
+const helpShortGuideBtn = document.getElementById("helpShortGuideBtn");
+const helpTourBtn = document.getElementById("helpTourBtn");
 
 init();
 
@@ -823,6 +846,11 @@ function setAccessMode(mode) {
   document.body.classList.toggle("guest-mode", mode === "guest");
   document.body.classList.toggle("adult-mode", mode === "adult");
   document.body.classList.toggle("child-mode", mode === "child");
+  document.body.classList.remove("role-student", "role-parent", "role-teacher", "role-admin");
+  const role = mode === "child" ? "student" : cloudProfile?.role || roleSelect?.value || "parent";
+  document.body.classList.add(`role-${role}`);
+  if (mode !== "guest") document.body.classList.remove("guest-ready");
+  if (mode !== "child") document.body.classList.remove("child-ready");
   if (landingPanel) landingPanel.hidden = mode !== "landing";
   updateGuestPanel();
 }
@@ -878,9 +906,94 @@ function startGuestMode(silent = false) {
   localStorage.setItem("mamaAiLearningLang", currentLang);
   if (gradeSelect) gradeSelect.value = String(currentGrade);
   if (learningLanguageSelect) learningLanguageSelect.value = currentLang;
+  guestWizardStep = 1;
+  document.body.classList.remove("guest-ready");
   setAccessMode("guest");
   renderAll();
+  renderGuestWizard();
   if (!silent) addMessage("bot success", "Можно попробовать Mama Ai бесплатно: выбери класс, предмет и задай вопрос. Я объясню по шагам, как терпеливый репетитор.");
+}
+
+function renderGuestWizard() {
+  if (!guestWizard) return;
+  guestWizard.hidden = appAccessMode !== "guest" || document.body.classList.contains("guest-ready");
+  if (guestWizard.hidden) return;
+  if (guestStepPill) guestStepPill.textContent = `Шаг ${guestWizardStep} из 3`;
+  if (guestGradeChoices) guestGradeChoices.hidden = guestWizardStep !== 1;
+  if (guestSubjectChoices) guestSubjectChoices.hidden = guestWizardStep !== 2;
+  if (guestActionChoices) guestActionChoices.hidden = guestWizardStep !== 3;
+  if (guestBackBtn) guestBackBtn.hidden = guestWizardStep === 1;
+
+  if (guestWizardStep === 1) {
+    guestWizardTitle.textContent = "В каком ты классе?";
+    guestWizardHint.textContent = "Выбери класс, и я покажу только нужные предметы.";
+    guestGradeChoices.innerHTML = Array.from({ length: 11 }, (_, index) => {
+      const grade = index + 1;
+      return `<button type="button" class="${grade === currentGrade ? "active" : ""}" data-grade="${grade}">${grade}</button>`;
+    }).join("");
+  }
+
+  if (guestWizardStep === 2) {
+    guestWizardTitle.textContent = "Выбери предмет";
+    guestWizardHint.textContent = `${currentGrade} класс: показываю только предметы этого класса.`;
+    guestSubjectChoices.innerHTML = getSubjectsForGrade().map((subject) => {
+      return `<button type="button" class="${subject.key === currentSubjectKey ? "active" : ""}" data-subject="${subject.key}"><strong>${subjectLabel(subject.title)}</strong><span>${subject.tags}</span></button>`;
+    }).join("");
+  }
+
+  if (guestWizardStep === 3) {
+    guestWizardTitle.textContent = "С чем помочь?";
+    guestWizardHint.textContent = `${subjectLabel(currentSubject().title)}: можно сразу написать вопрос или загрузить фото задания.`;
+  }
+}
+
+function finishGuestWizard(action) {
+  document.body.classList.add("guest-ready");
+  if (guestWizard) guestWizard.hidden = true;
+  renderAll();
+  const target = action === "photo" ? document.getElementById("photoInput") : userInput;
+  const panel = action === "photo" ? document.querySelector(".photo-tool") : document.getElementById("assistant");
+  panel?.scrollIntoView({ behavior: "smooth", block: "center" });
+  if (action === "photo") {
+    document.getElementById("photoStatus").textContent = "Нажми на область загрузки и добавь фото задания. Я помогу разобрать условие по шагам.";
+  } else {
+    userInput.placeholder = "Напиши задание или вопрос сюда";
+    window.setTimeout(() => target?.focus(), 350);
+  }
+}
+
+function openChildLearning(action = "question") {
+  document.body.classList.add("child-ready");
+  if (childHomePanel) childHomePanel.hidden = true;
+  if (action === "subject") {
+    document.getElementById("learn")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+  if (action === "photo") {
+    document.querySelector(".photo-tool")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    document.getElementById("photoStatus").textContent = "Добавь фото домашнего задания, и я помогу разобрать его по шагам.";
+    return;
+  }
+  document.getElementById("assistant")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  window.setTimeout(() => userInput?.focus(), 350);
+}
+
+function openHelpDrawer() {
+  if (helpDrawer) helpDrawer.hidden = false;
+}
+
+function closeHelpDrawer() {
+  if (helpDrawer) helpDrawer.hidden = true;
+}
+
+function renderShortGuideInDrawer() {
+  openHelpDrawer();
+  const old = helpDrawer.querySelector(".inline-guide");
+  if (old) old.remove();
+  const box = document.createElement("div");
+  box.className = "inline-guide";
+  box.innerHTML = guideSlidesData.map((slide) => `<article><strong>${slide.title}</strong><p>${slide.body}</p></article>`).join("");
+  helpDrawer.appendChild(box);
 }
 
 function openAdultMode() {
@@ -888,6 +1001,15 @@ function openAdultMode() {
   setAccessMode("adult");
   if (guestLimitPanel) guestLimitPanel.hidden = true;
   document.getElementById("profile")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function openParentHome() {
+  setAccessMode("adult");
+  if (cloudProfile?.role === "admin") {
+    document.getElementById("analytics")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+  document.getElementById("account")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 const guideSlidesData = [
@@ -920,32 +1042,44 @@ function closeGuideModal() {
 const guidedTourSteps = [
   {
     selector: "#guestStartBtn",
-    text: "Сначала нажимаем кнопку Попробовать бесплатно. Ребёнок может начать без регистрации.",
+    text: "Сначала нажимаем кнопку Начать заниматься. Ребёнок может начать без регистрации.",
     before: () => setAccessMode("landing")
   },
   {
-    selector: "#gradeSelect",
-    text: "Здесь выбираем класс ребёнка: первый, третий, шестой или любой до одиннадцатого.",
-    before: () => startGuestMode(true)
+    selector: "#guestGradeChoices",
+    text: "Здесь ребёнок выбирает класс: от первого до одиннадцатого.",
+    before: () => {
+      startGuestMode(true);
+      guestWizardStep = 1;
+      renderGuestWizard();
+    }
   },
   {
-    selector: "#learningLanguageSelect",
-    text: "Здесь выбираем язык обучения. Mama AI будет отвечать на этом языке.",
-    before: () => startGuestMode(true)
+    selector: "#guestSubjectChoices",
+    text: "После класса показываются только предметы выбранного класса.",
+    before: () => {
+      startGuestMode(true);
+      guestWizardStep = 2;
+      renderGuestWizard();
+    }
   },
   {
-    selector: "#learn",
-    text: "После выбора класса появляются предметы именно для этого класса. Можно нажать нужный предмет.",
-    before: () => startGuestMode(true)
+    selector: "#actionQuestionBtn",
+    text: "Теперь выбираем, чем помочь: написать вопрос или добавить фото задания.",
+    before: () => {
+      startGuestMode(true);
+      guestWizardStep = 3;
+      renderGuestWizard();
+    }
   },
   {
     selector: "#userInput",
     text: "Сюда ребёнок пишет вопрос или задание. Mama AI объясняет решение по шагам, не просто даёт ответ.",
-    before: () => startGuestMode(true)
+    before: () => finishGuestWizard("question")
   },
   {
     selector: "#adultLoginLink",
-    text: "Если нужно сохранить прогресс, родитель нажимает вход для родителей и учителей.",
+    text: "Если нужно сохранить прогресс, родитель нажимает Войти.",
     before: () => setAccessMode("landing")
   },
   {
@@ -1079,6 +1213,7 @@ function renderChildCard(child) {
     ${link ? `<input readonly value="${link}" aria-label="Личная ссылка ребёнка" />` : ""}
     <div class="feedback-actions">
       ${link ? `<button type="button" class="ghost-btn copy-child-link">Копировать ссылку</button>` : ""}
+      ${link ? `<button type="button" class="ghost-btn send-child-link">Отправить</button>` : ""}
       ${link ? `<a class="ghost-btn whatsapp-link" href="https://wa.me/?text=${encodeURIComponent(link)}" target="_blank" rel="noreferrer">WhatsApp</a>` : ""}
       <button type="button" class="ghost-btn rotate-child-link">Обновить ссылку</button>
       <button type="button" class="ghost-btn revoke-child-link">Отключить</button>
@@ -1162,6 +1297,16 @@ function applyChildSession(session) {
   localStorage.setItem("mamaAiGrade", String(currentGrade));
   localStorage.setItem("mamaAiLearningLang", currentLang);
   setAccessMode("child");
+  renderChildHome();
+}
+
+function renderChildHome() {
+  if (!childHomePanel) return;
+  childHomePanel.hidden = appAccessMode !== "child";
+  if (childHomePanel.hidden) return;
+  const name = childSession?.display_name || studentName?.value || "ученик";
+  childHomeTitle.textContent = `Привет, ${name} 👋`;
+  childHomeMeta.textContent = `${currentGrade} класс · ${(currentLang || "ru").toUpperCase()} · ${points} баллов`;
 }
 
 async function saveChildProgress(pointsDelta, actionType, payload = {}) {
@@ -1201,7 +1346,7 @@ async function init() {
   if (!childRestored) {
     await restoreCloudSession();
     if (cloudProfile) {
-      setAccessMode("adult");
+      openParentHome();
       await initServerSession();
     } else {
       setAccessMode("landing");
@@ -1295,9 +1440,9 @@ async function registerCloudAccount() {
       return;
     }
     applyCloudProfile(result.profile);
-    setAccessMode("adult");
     await syncServerState();
     renderAll();
+    openParentHome();
   } catch (error) {
     setAuthMessage(`Регистрация не прошла: ${error.message}`, true);
   }
@@ -1317,9 +1462,9 @@ async function loginCloudAccount() {
     setAuthMessage("Вхожу в кабинет...");
     const result = await window.MamaAiSupabase.signIn(form.email, form.password, form);
     applyCloudProfile(result.profile);
-    setAccessMode("adult");
     await syncServerState();
     renderAll();
+    openParentHome();
   } catch (error) {
     setAuthMessage(`Вход не прошёл: ${error.message}`, true);
   }
@@ -1780,10 +1925,54 @@ function bindEvents() {
 
   natureSoundBtn.addEventListener("click", toggleNatureSound);
 
-  if (guestStartBtn) guestStartBtn.addEventListener("click", startGuestMode);
+  if (guestStartBtn) guestStartBtn.addEventListener("click", () => startGuestMode());
   if (adultLoginLink) adultLoginLink.addEventListener("click", openAdultMode);
-  if (videoGuideBtn) videoGuideBtn.addEventListener("click", openGuideModal);
-  if (profileHowBtn) profileHowBtn.addEventListener("click", openGuideModal);
+  if (videoGuideBtn) videoGuideBtn.addEventListener("click", openHelpDrawer);
+  if (helpFab) helpFab.addEventListener("click", openHelpDrawer);
+  if (closeHelpBtn) closeHelpBtn.addEventListener("click", closeHelpDrawer);
+  if (helpShortGuideBtn) helpShortGuideBtn.addEventListener("click", renderShortGuideInDrawer);
+  if (helpTourBtn) helpTourBtn.addEventListener("click", () => {
+    closeHelpDrawer();
+    startGuidedTour();
+  });
+  if (profileHowBtn) profileHowBtn.addEventListener("click", openHelpDrawer);
+  if (guestGradeChoices) {
+    guestGradeChoices.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-grade]");
+      if (!button) return;
+      currentGrade = Number(button.dataset.grade);
+      localStorage.setItem("mamaAiGrade", String(currentGrade));
+      gradeSelect.value = String(currentGrade);
+      currentSubjectKey = getSubjectsForGrade()[0].key;
+      guestWizardStep = 2;
+      saveGuestState();
+      renderAll();
+      renderGuestWizard();
+    });
+  }
+  if (guestSubjectChoices) {
+    guestSubjectChoices.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-subject]");
+      if (!button) return;
+      currentSubjectKey = button.dataset.subject;
+      guestWizardStep = 3;
+      saveGuestState();
+      renderAll();
+      renderGuestWizard();
+    });
+  }
+  if (guestBackBtn) {
+    guestBackBtn.addEventListener("click", () => {
+      guestWizardStep = Math.max(1, guestWizardStep - 1);
+      renderGuestWizard();
+    });
+  }
+  if (actionPhotoBtn) actionPhotoBtn.addEventListener("click", () => finishGuestWizard("photo"));
+  if (actionQuestionBtn) actionQuestionBtn.addEventListener("click", () => finishGuestWizard("question"));
+  if (childContinueBtn) childContinueBtn.addEventListener("click", () => openChildLearning("question"));
+  if (childHomeworkBtn) childHomeworkBtn.addEventListener("click", () => openChildLearning("photo"));
+  if (childQuestionBtn) childQuestionBtn.addEventListener("click", () => openChildLearning("question"));
+  if (childSubjectBtn) childSubjectBtn.addEventListener("click", () => openChildLearning("subject"));
   if (closeVideoBtn) closeVideoBtn.addEventListener("click", closeGuideModal);
   if (guidePrevBtn) guidePrevBtn.addEventListener("click", () => {
     guideSlideIndex = Math.max(0, guideSlideIndex - 1);
@@ -1814,6 +2003,16 @@ function bindEvents() {
         if (input?.value) {
           await navigator.clipboard?.writeText(input.value);
           if (status) status.textContent = "Ссылка скопирована.";
+        }
+      }
+      if (event.target.closest(".send-child-link")) {
+        const input = card.querySelector("input");
+        if (input?.value && navigator.share) {
+          await navigator.share({ title: "Mama AI", text: "Ссылка для входа ребёнка в Mama AI", url: input.value });
+          if (status) status.textContent = "Ссылка готова к отправке.";
+        } else if (input?.value) {
+          await navigator.clipboard?.writeText(input.value);
+          if (status) status.textContent = "Ссылка скопирована. Можно отправить её ребёнку.";
         }
       }
       if (event.target.closest(".rotate-child-link")) {
@@ -1981,6 +2180,8 @@ function renderAll() {
   renderScore();
   renderAnalytics();
   chatTitle.textContent = subjectLabel(currentSubject().title);
+  renderGuestWizard();
+  renderChildHome();
 }
 
 function isNoMarksGrade() {
@@ -2217,7 +2418,7 @@ async function renderAccountAndParent() {
     studentCabinetText.textContent = `${profileName}: ${currentGrade} класс, ${city}, ${subjectLabel(subject.title)}, ${points} баллов${roleText}.${codeText}`;
   }
   if (parentCabinetText) {
-    parentCabinetText.textContent = "Родительский кабинет показывает текущую тему, слабые места, рекомендации и план занятий.";
+    parentCabinetText.textContent = "Добро пожаловать 👋 Добавьте ребёнка, чтобы начать. После добавления здесь появится карточка ребёнка, ссылка для входа и прогресс.";
   }
   if (currentTopicInsight) {
     currentTopicInsight.textContent = `${subjectLabel(subject.title)}: ${subject.topics[0]}`;

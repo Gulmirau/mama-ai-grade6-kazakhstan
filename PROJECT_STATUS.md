@@ -1,12 +1,23 @@
 # Mama AI Project Status
 
-Last updated: 2026-08-12
+Last updated: 2026-08-14
 
 ## Summary
 
 Supabase is connected in the public GitHub Pages build. The site no longer runs in `setup_required` mode. Public registration UI is available, admin is not self-selectable, and the frontend uses only the Supabase publishable/anon key.
 
 Important audit note: the automated signup check on 2026-08-11 was blocked by Supabase email rate limiting after repeated test registrations. Earlier public UI signup reached Supabase Auth and returned the expected email-confirmation flow. Direct confirmation of `auth.users` and `public.profiles` rows requires either a confirmed test email session or viewing the Supabase dashboard.
+
+## 2026-08-14 Public UX Simplification
+
+- Public first screen was simplified to three clear choices: "Начать заниматься", "Войти", and "Как пользоваться".
+- The large navigation menu is hidden from new visitors and guests.
+- Guest mode now starts with a guided 3-step flow: choose grade, choose subject, choose help type.
+- Parent registration is visually simplified to the minimum first-step fields: name, email, password, and role.
+- Parent after login is sent toward "Мои дети" instead of being left on the general screen.
+- Child session now starts with a child-only home screen: continue learning, homework photo, question, or subject choice.
+- Help moved to a permanent floating "Помощь" button and right-side drawer. The existing voice-and-arrow tour is still available from that drawer.
+- Video instruction area is prepared as a placeholder in the side help panel; it does not autoplay.
 
 ## 2026-08-12 Child-First Redesign
 

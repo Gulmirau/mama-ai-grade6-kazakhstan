@@ -61,30 +61,45 @@
       <section class="landing-panel" id="landing">
         <div class="landing-copy">
           <p class="eyebrow">Mama AI</p>
-          <h1>Привет! Я Mama Ai — твой помощник по школьным предметам</h1>
-          <p class="landing-lead">Объясню сложную тему, помогу выполнить задание и подготовиться к СОР и СОЧ. Начать можно сразу, без регистрации.</p>
+          <h1>Привет! Я Mama AI 👋</h1>
+          <p class="landing-lead">Помогу с домашним заданием и объясню сложную тему простыми словами.</p>
           <div class="landing-actions">
-            <button class="primary-btn big-action" id="guestStartBtn" type="button">Попробовать бесплатно</button>
-            <button class="ghost-btn big-action" id="videoGuideBtn" type="button">▶ Посмотреть, как это работает</button>
+            <button class="primary-btn big-action" id="guestStartBtn" type="button">Начать заниматься</button>
+            <button class="ghost-btn big-action" id="adultLoginLink" type="button">Войти</button>
           </div>
           <div class="landing-language" aria-label="Язык интерфейса">
             <button class="lang-btn active" data-lang="ru" type="button">Русский</button>
             <button class="lang-btn" data-lang="kk" type="button">Қазақша</button>
             <button class="lang-btn" data-lang="en" type="button">English</button>
           </div>
-          <button class="link-button" id="adultLoginLink" type="button">Вход для родителей и учителей</button>
+          <button class="link-button" id="videoGuideBtn" type="button">Как пользоваться</button>
         </div>
         <div class="landing-demo" aria-hidden="true">
-          <div class="demo-card">1. Выбери класс</div>
-          <div class="demo-card">2. Задай вопрос</div>
-          <div class="demo-card">3. Получи объяснение</div>
-          <div class="demo-card reward">+10 баллов</div>
+          <div class="demo-card">1. Класс</div>
+          <div class="demo-card">2. Предмет</div>
+          <div class="demo-card">3. Вопрос</div>
+          <div class="demo-card reward">Понятное объяснение</div>
         </div>
       </section>
 
       <section class="guest-status-panel" id="guestStatusPanel" hidden>
         <strong id="guestModeTitle">Гостевой режим</strong>
         <span id="guestActionsLeft">Можно попробовать ещё 3 задания</span>
+      </section>
+
+      <section class="guest-wizard" id="guestWizard" hidden>
+        <div class="wizard-card">
+          <span class="pill" id="guestStepPill">Шаг 1 из 3</span>
+          <h2 id="guestWizardTitle">В каком ты классе?</h2>
+          <p id="guestWizardHint">Выбери класс, и я покажу только нужные предметы.</p>
+          <div class="grade-choice-grid" id="guestGradeChoices"></div>
+          <div class="subject-choice-grid" id="guestSubjectChoices" hidden></div>
+          <div class="action-choice-grid" id="guestActionChoices" hidden>
+            <button class="primary-btn big-action" id="actionPhotoBtn" type="button">📷 Сфотографировать задание</button>
+            <button class="ghost-btn big-action" id="actionQuestionBtn" type="button">⌨️ Написать вопрос</button>
+          </div>
+          <button class="link-button" id="guestBackBtn" type="button" hidden>← Назад</button>
+        </div>
       </section>
 
       <section class="guest-limit-panel" id="guestLimitPanel" hidden>
@@ -102,6 +117,20 @@
           <button class="primary-btn" id="callParentBtn" type="button">Позвать родителя</button>
           <button class="ghost-btn" id="continueGuestBtn" type="button">Продолжить знакомство</button>
           <button class="ghost-btn" id="profileHowBtn" type="button">Как создать профиль</button>
+        </div>
+      </section>
+
+      <section class="child-home-panel" id="childHomePanel" hidden>
+        <div>
+          <p class="eyebrow">Детский кабинет</p>
+          <h2 id="childHomeTitle">Привет 👋</h2>
+          <p id="childHomeMeta">Выбери, чем займёмся сегодня.</p>
+        </div>
+        <button class="primary-btn big-action" id="childContinueBtn" type="button">Продолжить заниматься</button>
+        <div class="child-action-grid">
+          <button class="ghost-btn big-action" id="childHomeworkBtn" type="button">📷 Домашнее задание</button>
+          <button class="ghost-btn big-action" id="childQuestionBtn" type="button">💬 Задать вопрос</button>
+          <button class="ghost-btn big-action" id="childSubjectBtn" type="button">📚 Выбрать предмет</button>
         </div>
       </section>
 
@@ -166,15 +195,15 @@
       <section class="profile-panel adult-panel" id="profile">
         <div class="panel-heading">
           <div>
-            <p class="eyebrow" data-i18n="studentProfile">Профиль ученика</p>
-            <h2 data-i18n="chooseGradeMode">Выберите класс и режим работы</h2>
+            <p class="eyebrow">Вход для взрослых</p>
+            <h2>Создайте кабинет родителя или учителя</h2>
           </div>
           <button class="ghost-btn" id="logoutBtn" data-i18n="logout">Выйти</button>
         </div>
         <div class="control-grid">
           <label>
-            <span data-i18n="student">Ученик</span>
-            <input id="studentName" type="text" value="" placeholder="Имя родителя или ребёнка" />
+            <span>Имя</span>
+            <input id="studentName" type="text" value="" placeholder="Ваше имя" />
           </label>
           <label>
             <span>Город</span>
@@ -215,7 +244,6 @@
           <label>
             <span data-i18n="role">Роль</span>
             <select id="roleSelect" aria-label="Роль пользователя">
-              <option value="student" data-i18n="roleStudent">Ученик</option>
               <option value="parent" data-i18n="roleParent">Родитель</option>
               <option value="teacher" data-i18n="roleTeacher">Учитель</option>
             </select>
@@ -243,8 +271,8 @@
           </label>
         </div>
         <div class="auth-actions">
-          <button class="primary-btn" id="registerBtn" type="button">Создать кабинет</button>
-          <button class="ghost-btn" id="loginBtn" type="button">Войти</button>
+        <button class="primary-btn" id="registerBtn" type="button">Создать кабинет</button>
+        <button class="ghost-btn" id="loginBtn" type="button">Войти</button>
           <span id="authMessage" class="auth-message">Для общего кабинета подключите Supabase.</span>
         </div>
         <p class="system-note" id="profileNote">Проверяем подключение к серверу...</p>
@@ -253,8 +281,8 @@
       <section class="account-panel" id="account">
         <div class="panel-heading">
           <div>
-            <p class="eyebrow">Личный кабинет</p>
-            <h2>Ученик, родитель и облако</h2>
+            <p class="eyebrow">Кабинет родителя</p>
+            <h2>Мои дети</h2>
           </div>
           <span class="pill" id="cloudStatusPill">local</span>
         </div>
@@ -568,6 +596,26 @@
       </section>
     </main>
   </div>
+  <button class="help-fab" id="helpFab" type="button">❓ Помощь</button>
+  <aside class="help-drawer" id="helpDrawer" aria-label="Помощь Mama AI" hidden>
+    <div class="help-drawer-header">
+      <h2>Как пользоваться Mama AI</h2>
+      <button class="close-btn" id="closeHelpBtn" type="button" aria-label="Закрыть">×</button>
+    </div>
+    <div class="video-placeholder">
+      <strong>Видео: Как начать работать с Mama AI</strong>
+      <span>Сюда позже можно вставить mp4/WebM или ссылку на видео 30–60 секунд.</span>
+    </div>
+    <button class="primary-btn" id="helpShortGuideBtn" type="button">▶ Посмотреть короткую инструкцию</button>
+    <button class="ghost-btn" id="helpTourBtn" type="button">Показать прямо на сайте</button>
+    <ol class="text-guide">
+      <li>Нажмите «Начать заниматься».</li>
+      <li>Выберите класс.</li>
+      <li>Выберите предмет.</li>
+      <li>Сфотографируйте задание или напишите вопрос.</li>
+      <li>Чтобы сохранить прогресс, родитель создаёт профиль ребёнка.</li>
+    </ol>
+  </aside>
   <div class="confetti-layer" id="confettiLayer" aria-hidden="true"></div>
 
   <script src="i18n.js"></script>
