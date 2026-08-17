@@ -2,7 +2,7 @@ const path = require("node:path");
 const { chromium } = require("playwright");
 
 const root = path.resolve(__dirname, "..");
-const pageUrl = `file:///${path.join(root, "index.html").replace(/\\/g, "/")}`;
+const pageUrl = process.argv[2] || `file:///${path.join(root, "index.html").replace(/\\/g, "/")}`;
 const viewports = [
   { width: 320, height: 720 },
   { width: 360, height: 760 },
