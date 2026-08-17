@@ -767,6 +767,7 @@ const adminAccessText = document.getElementById("adminAccessText");
 const adminStudentRows = document.getElementById("adminStudentRows");
 const inactiveStudentList = document.getElementById("inactiveStudentList");
 const landingPanel = document.getElementById("landing");
+const mobileMenuBtn = document.getElementById("mobileMenuBtn");
 const guestStartBtn = document.getElementById("guestStartBtn");
 const videoGuideBtn = document.getElementById("videoGuideBtn");
 const adultLoginLink = document.getElementById("adultLoginLink");
@@ -782,6 +783,8 @@ const guestSubjectChoices = document.getElementById("guestSubjectChoices");
 const guestActionChoices = document.getElementById("guestActionChoices");
 const actionPhotoBtn = document.getElementById("actionPhotoBtn");
 const actionQuestionBtn = document.getElementById("actionQuestionBtn");
+const actionTopicBtn = document.getElementById("actionTopicBtn");
+const actionAssessmentBtn = document.getElementById("actionAssessmentBtn");
 const guestBackBtn = document.getElementById("guestBackBtn");
 const childHomePanel = document.getElementById("childHomePanel");
 const childHomeTitle = document.getElementById("childHomeTitle");
@@ -842,6 +845,8 @@ function saveGuestState() {
 
 function setAccessMode(mode) {
   appAccessMode = mode;
+  document.body.classList.remove("mobile-menu-open");
+  if (mobileMenuBtn) mobileMenuBtn.setAttribute("aria-expanded", "false");
   document.body.classList.toggle("landing-active", mode === "landing");
   document.body.classList.toggle("guest-mode", mode === "guest");
   document.body.classList.toggle("adult-mode", mode === "adult");
@@ -943,23 +948,37 @@ function renderGuestWizard() {
 
   if (guestWizardStep === 3) {
     guestWizardTitle.textContent = "С чем помочь?";
-    guestWizardHint.textContent = `${subjectLabel(currentSubject().title)}: можно сразу написать вопрос или загрузить фото задания.`;
+    guestWizardHint.textContent = `${subjectLabel(currentSubject().title)}: выбери действие, и я сразу открою нужный экран.`;
   }
 }
 
 function finishGuestWizard(action) {
   document.body.classList.add("guest-ready");
   if (guestWizard) guestWizard.hidden = true;
+  if (action === "assessment") {
+    modeSelect.value = isNoMarksGrade() ? "school" : "sor";
+  } else {
+    modeSelect.value = "school";
+  }
   renderAll();
-  const target = action === "photo" ? document.getElementById("photoInput") : userInput;
-  const panel = action === "photo" ? document.querySelector(".photo-tool") : document.getElementById("assistant");
+  const isPhoto = action === "photo";
+  const panel = isPhoto ? document.querySelector(".photo-tool") : document.getElementById("assistant");
   panel?.scrollIntoView({ behavior: "smooth", block: "center" });
-  if (action === "photo") {
+  if (isPhoto) {
     document.getElementById("photoStatus").textContent = "Нажми на область загрузки и добавь фото задания. Я помогу разобрать условие по шагам.";
+    return;
+  }
+  if (action === "topic") {
+    userInput.placeholder = `Напиши тему по предмету «${subjectLabel(currentSubject().title)}», которую нужно объяснить`;
+    addMessage("bot success", "Хорошо, объясню тему простыми словами и по шагам. Напиши название темы или пришли задание.");
+  } else if (action === "assessment") {
+    const modeName = isNoMarksGrade() ? "мини-тесту" : "СОР/СОЧ";
+    userInput.placeholder = `Напиши тему для подготовки к ${modeName}`;
+    addMessage("bot success", `Подготовим тебя к ${modeName}: сначала разберём тему, потом потренируемся на похожих заданиях.`);
   } else {
     userInput.placeholder = "Напиши задание или вопрос сюда";
-    window.setTimeout(() => target?.focus(), 350);
   }
+  window.setTimeout(() => userInput?.focus(), 350);
 }
 
 function openChildLearning(action = "question") {
@@ -984,6 +1003,12 @@ function openHelpDrawer() {
 
 function closeHelpDrawer() {
   if (helpDrawer) helpDrawer.hidden = true;
+}
+
+function toggleMobileMenu(forceOpen = null) {
+  const nextOpen = forceOpen === null ? !document.body.classList.contains("mobile-menu-open") : Boolean(forceOpen);
+  document.body.classList.toggle("mobile-menu-open", nextOpen);
+  if (mobileMenuBtn) mobileMenuBtn.setAttribute("aria-expanded", nextOpen ? "true" : "false");
 }
 
 function renderShortGuideInDrawer() {
@@ -1013,7 +1038,7 @@ function openParentHome() {
 }
 
 const guideSlidesData = [
-  { title: "1. Начало без регистрации", body: "Ребёнок нажимает «Попробовать бесплатно» и сразу попадает в учебный режим." },
+  { title: "1. Начало без регистрации", body: "Ребёнок нажимает «Начать заниматься» и сразу попадает в учебный режим." },
   { title: "2. Выбор класса", body: "Mama Ai подстраивает объяснение под 1–11 класс: младшим проще, старшим глубже." },
   { title: "3. Предмет и тема", body: "Можно выбрать школьный предмет, мини-тест, СОР, СОЧ или подготовку к ЕНТ там, где это подходит классу." },
   { title: "4. Объяснение по шагам", body: "AI не даёт только ответ, а спрашивает, подсказывает и ведёт ребёнка через ход решения." },
@@ -1225,7 +1250,7 @@ function renderChildCard(child) {
 
 async function createChildProfile() {
   if (!window.MamaAiSupabase?.isConfigured?.()) {
-    if (childCardList) childCardList.innerHTML = `<p class="parent-note">Supabase ещё не подключён на этой странице. Сначала нужен вход родителя.</p>`;
+    if (childCardList) childCardList.innerHTML = `<p class="parent-note">Сначала войдите в кабинет родителя, затем можно будет создать профиль ребёнка.</p>`;
     return;
   }
   if (!cloudProfile || !["parent", "admin"].includes(cloudProfile.role)) {
@@ -1404,28 +1429,28 @@ function applyCloudProfile(profile) {
   localStorage.setItem("mamaAiEmail", profile.email || "");
   localStorage.setItem("mamaAiCity", profile.city || "");
   setAuthMessage(profile.role === "admin"
-    ? "Вы вошли как администратор. Полная аналитика доступна через Supabase RLS."
-    : `Вход выполнен: ${profile.role}. Профиль сохраняется в Supabase.`);
+    ? "Вы вошли как администратор. Доступна полная аналитика."
+    : "Вход выполнен. Кабинет и прогресс будут сохраняться.");
 }
 
 async function restoreCloudSession() {
   if (!window.MamaAiSupabase?.isConfigured?.()) {
-    setAuthMessage("Supabase ещё не подключён. Сейчас работает локальный режим на этом устройстве.");
+    setAuthMessage("Можно попробовать без регистрации. Чтобы сохранять прогресс, создайте кабинет.");
     return;
   }
   try {
     const profile = await window.MamaAiSupabase.restoreProfile();
     if (profile) applyCloudProfile(profile);
-    else setAuthMessage("Supabase подключён. Зарегистрируйтесь или войдите по email и паролю.");
+    else setAuthMessage("Зарегистрируйтесь или войдите по email и паролю.");
   } catch (error) {
-    setAuthMessage(`Supabase подключён, но сессия не восстановилась: ${error.message}`, true);
+    setAuthMessage(`Не удалось восстановить вход: ${error.message}`, true);
   }
 }
 
 async function registerCloudAccount() {
   const form = getAuthForm();
   if (!window.MamaAiSupabase?.isConfigured?.()) {
-    setAuthMessage("Сначала вставьте SUPABASE_URL и SUPABASE_ANON_KEY в config.js.", true);
+    setAuthMessage("Кабинет пока недоступен. Попробуйте гостевой режим или обратитесь к администратору.", true);
     return;
   }
   if (!form.email || form.password.length < 6) {
@@ -1451,7 +1476,7 @@ async function registerCloudAccount() {
 async function loginCloudAccount() {
   const form = getAuthForm();
   if (!window.MamaAiSupabase?.isConfigured?.()) {
-    setAuthMessage("Сначала вставьте SUPABASE_URL и SUPABASE_ANON_KEY в config.js.", true);
+    setAuthMessage("Кабинет пока недоступен. Попробуйте гостевой режим или обратитесь к администратору.", true);
     return;
   }
   if (!form.email || !form.password) {
@@ -1474,7 +1499,7 @@ async function linkChildToParent() {
   if (!childLinkStatus || !childCodeInput) return;
   const code = childCodeInput.value.trim();
   if (!window.MamaAiSupabase?.isConfigured?.()) {
-    childLinkStatus.textContent = "Supabase не подключён. Привязка ребёнка доступна только в облачном кабинете.";
+    childLinkStatus.textContent = "Привязка ребёнка будет доступна после входа в кабинет.";
     return;
   }
   if (!cloudProfile) {
@@ -1865,17 +1890,12 @@ async function makePublicApiFallback(path, body = {}) {
 
 function updateProfileNote() {
   const sourceText = document.getElementById("gradeSource").value;
-  const serverText = uiLang === "en"
-    ? (serverOnline ? "server connected" : "server is offline, local mode is active")
+  const note = uiLang === "en"
+    ? `Account is ready. You can save children, links, progress, and learning history. Grade source: ${sourceText}.`
     : uiLang === "kk"
-      ? (serverOnline ? "сервер қосылды" : "сервер іске қосылмаған, жергілікті режим жұмыс істеп тұр")
-      : (serverOnline ? "сервер подключен" : "сервер не запущен, работает локальный режим");
-  const aiText = uiLang === "en"
-    ? (aiConfigured ? "AI API connected" : "AI API is not connected, tutor template is used")
-    : uiLang === "kk"
-      ? (aiConfigured ? "AI API қосылды" : "AI API қосылмаған, репетиторлық үлгі қолданылады")
-      : (aiConfigured ? "AI API подключен" : "AI API не подключен, используется репетиторский шаблон");
-  document.getElementById("profileNote").textContent = `${serverText}; ${aiText}. ${t("gradeSource")}: ${sourceText}.`;
+      ? `Кабинет дайын. Балалар профилін, сілтемелерді, прогресті және оқу тарихын сақтауға болады. Баға көзі: ${sourceText}.`
+      : `Кабинет готов. Можно сохранять детей, ссылки, прогресс и историю занятий. Источник оценок: ${sourceText}.`;
+  document.getElementById("profileNote").textContent = note;
 }
 
 function bindEvents() {
@@ -1926,6 +1946,10 @@ function bindEvents() {
   natureSoundBtn.addEventListener("click", toggleNatureSound);
 
   if (guestStartBtn) guestStartBtn.addEventListener("click", () => startGuestMode());
+  if (mobileMenuBtn) mobileMenuBtn.addEventListener("click", () => toggleMobileMenu());
+  document.querySelectorAll(".nav-list a").forEach((link) => {
+    link.addEventListener("click", () => toggleMobileMenu(false));
+  });
   if (adultLoginLink) adultLoginLink.addEventListener("click", openAdultMode);
   if (videoGuideBtn) videoGuideBtn.addEventListener("click", openHelpDrawer);
   if (helpFab) helpFab.addEventListener("click", openHelpDrawer);
@@ -1969,6 +1993,8 @@ function bindEvents() {
   }
   if (actionPhotoBtn) actionPhotoBtn.addEventListener("click", () => finishGuestWizard("photo"));
   if (actionQuestionBtn) actionQuestionBtn.addEventListener("click", () => finishGuestWizard("question"));
+  if (actionTopicBtn) actionTopicBtn.addEventListener("click", () => finishGuestWizard("topic"));
+  if (actionAssessmentBtn) actionAssessmentBtn.addEventListener("click", () => finishGuestWizard("assessment"));
   if (childContinueBtn) childContinueBtn.addEventListener("click", () => openChildLearning("question"));
   if (childHomeworkBtn) childHomeworkBtn.addEventListener("click", () => openChildLearning("photo"));
   if (childQuestionBtn) childQuestionBtn.addEventListener("click", () => openChildLearning("question"));
@@ -2426,17 +2452,19 @@ async function renderAccountAndParent() {
 
   try {
     const cloud = await apiFetch("/api/cloud/status", {}, false);
-    cloudStatusPill.textContent = cloud.mode || cloud.provider || "local";
-    cloudBackendText.textContent = cloud.message || "Локальный режим активен.";
+    if (cloudStatusPill) cloudStatusPill.textContent = cloudProfile ? "Данные сохраняются" : "Войдите, чтобы сохранить";
+    if (cloudBackendText) cloudBackendText.textContent = cloudProfile
+      ? "Кабинет подключён. Данные ребёнка и прогресс сохраняются."
+      : "После входа кабинет сможет сохранять детей, ссылки и прогресс.";
     if (authStatusText) {
       authStatusText.textContent = cloud.authReady
-        ? (cloudProfile ? `Supabase Auth активен: ${cloudProfile.email}.` : `Supabase Auth готов: ${authProviderSelect?.value || "email"}.`)
-        : `Подготовлено под Supabase Auth. Сейчас вход: ${authProviderSelect?.value || "email"}, локальный режим.`;
+        ? (cloudProfile ? `Вход выполнен: ${cloudProfile.email}.` : "Вход по email готов.")
+        : "Вход временно недоступен.";
     }
   } catch {
-    cloudStatusPill.textContent = "local";
-    cloudBackendText.textContent = "Публичный/локальный режим. Для общей базы нужен облачный backend.";
-    if (authStatusText) authStatusText.textContent = "Локальный режим авторизации.";
+    if (cloudStatusPill) cloudStatusPill.textContent = "Сохранение позже";
+    if (cloudBackendText) cloudBackendText.textContent = "Сейчас можно заниматься без сохранения общего прогресса.";
+    if (authStatusText) authStatusText.textContent = "Вход временно недоступен.";
   }
 
   try {
@@ -2717,7 +2745,7 @@ function makeAnswer(text) {
 }
 
 async function handlePhotoUpload(file) {
-  addMessage("bot", "Фото принято. Сейчас попробую отправить его на сервер для AI-разбора.");
+  addMessage("bot", "Фото принято. Сейчас помогу разобрать задание по шагам.");
   try {
     const imageData = await fileToDataUrl(file);
     const subject = currentSubject();
@@ -2756,7 +2784,7 @@ async function handlePhotoUpload(file) {
     syncServerState();
   } catch {
     serverOnline = false;
-    replaceLastBotMessage("Разбор фото: читаем условие, определяем предмет, выписываем данные, решаем по шагам и проверяем ответ. Для настоящего распознавания запустите сервер и добавьте OPENAI_API_KEY.");
+    replaceLastBotMessage("Разбор фото: читаем условие, определяем предмет, выписываем данные, решаем по шагам и проверяем ответ. Если текст на фото плохо виден, напиши условие рядом сообщением.");
     updateProfileNote();
   }
 }
@@ -3234,7 +3262,11 @@ function renderDailyTheme() {
   for (let index = 0; index < count; index += 1) {
     const item = document.createElement("span");
     item.className = `theme-particle theme-${theme.particles}`;
-    item.style.left = index % 2 === 0 ? `${2 + Math.random() * 14}%` : `${84 + Math.random() * 12}%`;
+    if (index % 2 === 0) {
+      item.style.left = `${2 + Math.random() * 14}%`;
+    } else {
+      item.style.right = `${2 + Math.random() * 8}%`;
+    }
     item.style.top = `${8 + Math.random() * 82}%`;
     item.style.animationDelay = `${Math.random() * 4}s`;
     item.style.setProperty("--theme-color-a", theme.colors[0]);

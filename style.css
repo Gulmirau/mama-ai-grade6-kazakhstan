@@ -73,6 +73,10 @@ button { cursor: pointer; }
   min-height: 100vh;
 }
 
+.mobile-menu-btn {
+  display: none;
+}
+
 .sidebar {
   position: sticky;
   top: 0;
@@ -1368,6 +1372,42 @@ body.theme-disabled .daily-theme-layer {
   background: #f8fbff;
 }
 
+.advanced-auth-field,
+.technical-panel {
+  display: none;
+}
+
+body.role-admin .technical-panel,
+body.role-admin .service-status {
+  display: block;
+}
+
+body:not(.role-admin) .service-status {
+  display: none;
+}
+
+.child-extra-settings {
+  display: grid;
+  gap: 10px;
+}
+
+.child-extra-settings summary {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  color: var(--blue);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.child-extra-settings[open] {
+  padding-top: 4px;
+}
+
+.child-extra-settings input + input {
+  margin-top: 10px;
+}
+
 .child-card-list {
   display: grid;
   gap: 12px;
@@ -1419,7 +1459,7 @@ body.theme-disabled .daily-theme-layer {
   gap: 12px;
 }
 
-.video-placeholder,
+.video-instruction,
 .inline-guide article {
   display: grid;
   gap: 8px;
@@ -1430,10 +1470,18 @@ body.theme-disabled .daily-theme-layer {
   background: #f8fbff;
 }
 
-.video-placeholder span,
+.video-instruction span,
 .inline-guide p {
   color: var(--muted);
   line-height: 1.45;
+}
+
+.video-instruction video {
+  width: 100%;
+  height: auto;
+  min-height: 160px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #eef7fb, #fff8dd);
 }
 
 body.landing-active .sidebar,
@@ -1498,16 +1546,6 @@ body.adult-mode.role-teacher .nav-list a[href="#profile"] {
 
 body.adult-mode:not(.role-admin) #analytics {
   display: none !important;
-}
-
-body.adult-mode #profile .control-grid label:has(#studentCity),
-body.adult-mode #profile .control-grid label:has(#authProviderSelect),
-body.adult-mode #profile .control-grid label:has(#interfaceLanguageSelect),
-body.adult-mode #profile .control-grid label:has(#learningLanguageSelect),
-body.adult-mode #profile .control-grid label:has(#gradeSelect),
-body.adult-mode #profile .control-grid label:has(#modeSelect),
-body.adult-mode #profile .control-grid label:has(#gradeSource) {
-  display: none;
 }
 
 body.guest-mode .nav-list a[href="#profile"],
@@ -1665,12 +1703,44 @@ body.child-mode .nav-list a[href="#analytics"] {
     overflow-x: hidden;
   }
 
-  .sidebar {
-    position: static;
+  .mobile-menu-btn {
+    position: sticky;
+    top: 0;
+    z-index: 42;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;
     width: 100%;
+    border: 0;
+    background: var(--nav);
+    color: #fff;
+    font-weight: 900;
+    box-shadow: 0 10px 28px rgba(23, 33, 47, 0.18);
+  }
+
+  body.landing-active .mobile-menu-btn,
+  body.guest-mode .mobile-menu-btn,
+  body.child-mode .mobile-menu-btn {
+    display: none;
+  }
+
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 43;
+    width: min(86vw, 320px);
     min-width: 0;
-    height: auto;
+    height: 100vh;
     padding: 18px;
+    overflow: auto;
+    transform: translateX(-105%);
+    transition: transform 0.22s ease;
+    box-shadow: 22px 0 45px rgba(23, 33, 47, 0.24);
+  }
+
+  body.mobile-menu-open .sidebar {
+    transform: translateX(0);
   }
 
   .workspace {
@@ -1702,11 +1772,37 @@ body.child-mode .nav-list a[href="#analytics"] {
   .subject-grid, .answer-grid, .score-strip, .metric-grid, .control-grid, .input-row { grid-template-columns: minmax(0, 1fr); }
   .score-strip div, .metric-grid div, .subject-card { min-width: 0; }
   .mascot-bubble { left: 98px; right: auto; max-width: calc(100vw - 130px); }
-  .auth-actions > * { max-width: 100%; }
+  .auth-actions,
+  .feedback-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .auth-actions > *,
+  .feedback-actions > *,
+  .add-child-form > *,
+  .child-extra-settings > *,
+  .landing-language > * {
+    width: 100%;
+    max-width: 100%;
+  }
+
   .child-link-form { grid-template-columns: minmax(0, 1fr); }
   .message { max-width: 100%; }
   .progress-row, .event-list li { grid-template-columns: 1fr; }
   .panel-heading { align-items: flex-start; flex-direction: column; }
   .assistant-actions { justify-content: flex-start; }
   .mascot-stage { justify-content: start; }
+
+  input,
+  select,
+  textarea,
+  .primary-btn,
+  .ghost-btn,
+  .link-button,
+  .grade-choice-grid button,
+  .subject-choice-grid button,
+  .big-action {
+    min-height: 48px;
+  }
 }

@@ -1,12 +1,22 @@
 # Mama AI Project Status
 
-Last updated: 2026-08-14
+Last updated: 2026-08-17
 
 ## Summary
 
 Supabase is connected in the public GitHub Pages build. The site no longer runs in `setup_required` mode. Public registration UI is available, admin is not self-selectable, and the frontend uses only the Supabase publishable/anon key.
 
 Important audit note: the automated signup check on 2026-08-11 was blocked by Supabase email rate limiting after repeated test registrations. Earlier public UI signup reached Supabase Auth and returned the expected email-confirmation flow. Direct confirmation of `auth.users` and `public.profiles` rows requires either a confirmed test email session or viewing the Supabase dashboard.
+
+## 2026-08-17 Responsive Public UX Pass
+
+- Guest mode now has the full 3-step path required for a new child: grade, subject, then one of four actions: photo, question, topic explanation, or SOR/SOCH preparation.
+- Parent registration is simplified in the markup and CSS: first-step fields are name, email, password, and role. City, grade, mode, language, and grade-source controls stay out of the first registration screen.
+- Parent child creation keeps only child name, class, and learning language visible by default. City and school moved into "Дополнительные настройки".
+- Adult technical status panels are hidden for non-admin users. User-facing messages avoid Supabase/local/backend wording.
+- Mobile adult navigation now uses a "☰ Меню" drawer instead of showing the full desktop sidebar.
+- Help drawer includes a real responsive video component ready for MP4/WebM or URL insertion, with no autoplay.
+- Browser responsive check passed on 320, 360, 375, 390, 412, 430, 768, and 1280 px using Microsoft Edge automation.
 
 ## 2026-08-14 Public UX Simplification
 
@@ -56,7 +66,7 @@ Important: apply `supabase/migrations/202608120001_child_guest_and_invites.sql` 
 | Parent cabinet | PARTIAL | SQL/UI audit | Parent-child table exists; safe `link_child_by_code` RPC and UI field added | Third migration must be run in Supabase; full parent E2E not yet verified |
 | Teacher cabinet | PARTIAL | SQL audit | Teacher/class tables and RLS structure exist | No complete UI flow to assign teacher to class |
 | Admin analytics | PARTIAL | Code audit | Admin uses Supabase analytics path when logged in as configured admin email | Needs confirmed admin login and real user activity |
-| Mobile layout | PARTIAL | 390px browser check found overflow; CSS fix added | New CSS limits width and reduces overflow risk | Needs public recheck after deployment |
+| Mobile layout | WORKING | `scripts/responsive-ux-check.js` on 320, 360, 375, 390, 412, 430, 768, 1280 px | Landing, guest wizard, action step, and learning workspace fit without horizontal overflow | Needs public recheck after GitHub Pages deployment |
 | Security | PARTIAL | Static checks | No public service_role/OpenAI secret; admin cannot self-select; RLS SQL present | Live multi-account RLS bypass testing still needed |
 
 ## Current Counts

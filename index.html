@@ -9,6 +9,7 @@
 <body class="landing-active">
   <div class="daily-theme-layer" id="dailyThemeLayer" aria-hidden="true"></div>
   <div class="app-shell">
+    <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-expanded="false">☰ Меню</button>
     <aside class="sidebar" aria-label="Навигация">
       <div class="brand">
         <div class="brand-mark">M</div>
@@ -97,6 +98,8 @@
           <div class="action-choice-grid" id="guestActionChoices" hidden>
             <button class="primary-btn big-action" id="actionPhotoBtn" type="button">📷 Сфотографировать задание</button>
             <button class="ghost-btn big-action" id="actionQuestionBtn" type="button">⌨️ Написать вопрос</button>
+            <button class="ghost-btn big-action" id="actionTopicBtn" type="button">📖 Объясни мне тему</button>
+            <button class="ghost-btn big-action" id="actionAssessmentBtn" type="button">📝 Подготовиться к СОР/СОЧ</button>
           </div>
           <button class="link-button" id="guestBackBtn" type="button" hidden>← Назад</button>
         </div>
@@ -146,7 +149,7 @@
             <button class="primary-btn" id="guideTryBtn" type="button">Попробовать сейчас</button>
           </div>
           <ol class="text-guide">
-            <li>Нажми «Попробовать бесплатно».</li>
+            <li>Нажми «Начать заниматься».</li>
             <li>Выбери класс, язык и предмет.</li>
             <li>Задай вопрос или выбери задание.</li>
             <li>Получи понятное объяснение.</li>
@@ -205,7 +208,7 @@
             <span>Имя</span>
             <input id="studentName" type="text" value="" placeholder="Ваше имя" />
           </label>
-          <label>
+          <label class="advanced-auth-field">
             <span>Город</span>
             <input id="studentCity" type="text" value="Алматы" placeholder="Например: Алматы" />
           </label>
@@ -217,7 +220,7 @@
             <span>Пароль</span>
             <input id="userPassword" type="password" autocomplete="current-password" placeholder="Минимум 6 символов" />
           </label>
-          <label>
+          <label class="advanced-auth-field">
             <span>Вход</span>
             <select id="authProviderSelect" aria-label="Способ входа">
               <option value="email">Email</option>
@@ -225,7 +228,7 @@
               <option value="phone_no_sms">Телефон без SMS</option>
             </select>
           </label>
-          <label>
+          <label class="advanced-auth-field">
             <span data-i18n="interfaceLanguage">Язык интерфейса</span>
             <select id="interfaceLanguageSelect" aria-label="Язык интерфейса">
               <option value="ru">Русский</option>
@@ -233,7 +236,7 @@
               <option value="en">English</option>
             </select>
           </label>
-          <label>
+          <label class="advanced-auth-field">
             <span data-i18n="learningLanguage">Язык обучения в школе</span>
             <select id="learningLanguageSelect" aria-label="Язык обучения в школе">
               <option value="ru">Русский</option>
@@ -248,11 +251,11 @@
               <option value="teacher" data-i18n="roleTeacher">Учитель</option>
             </select>
           </label>
-          <label>
+          <label class="advanced-auth-field">
             <span data-i18n="grade">Класс</span>
             <select id="gradeSelect" aria-label="Выбор класса"></select>
           </label>
-          <label>
+          <label class="advanced-auth-field">
             <span data-i18n="mode">Режим</span>
             <select id="modeSelect" aria-label="Режим обучения">
               <option value="school" data-i18n="modeSchool">Школьная программа</option>
@@ -261,7 +264,7 @@
               <option value="unt" data-i18n="modeUnt">Подготовка к ЕНТ</option>
             </select>
           </label>
-          <label>
+          <label class="advanced-auth-field">
             <span data-i18n="gradeSource">Источник оценок</span>
             <select id="gradeSource">
               <option data-i18n="sourceDemo">Демо-данные</option>
@@ -271,11 +274,11 @@
           </label>
         </div>
         <div class="auth-actions">
-        <button class="primary-btn" id="registerBtn" type="button">Создать кабинет</button>
+          <button class="primary-btn" id="registerBtn" type="button">Создать кабинет</button>
         <button class="ghost-btn" id="loginBtn" type="button">Войти</button>
-          <span id="authMessage" class="auth-message">Для общего кабинета подключите Supabase.</span>
+          <span id="authMessage" class="auth-message">Создайте кабинет или войдите по email.</span>
         </div>
-        <p class="system-note" id="profileNote">Проверяем подключение к серверу...</p>
+        <p class="system-note" id="profileNote">Кабинет поможет сохранить детей, ссылки и прогресс.</p>
       </section>
 
       <section class="account-panel" id="account">
@@ -284,7 +287,7 @@
             <p class="eyebrow">Кабинет родителя</p>
             <h2>Мои дети</h2>
           </div>
-          <span class="pill" id="cloudStatusPill">local</span>
+          <span class="pill service-status" id="cloudStatusPill">Данные сохранены</span>
         </div>
         <div class="account-grid">
           <article>
@@ -302,8 +305,11 @@
                 <option value="kk">Қазақша</option>
                 <option value="en">English</option>
               </select>
-              <input id="newChildCity" type="text" placeholder="Город (необязательно)" autocomplete="off" />
-              <input id="newChildSchool" type="text" placeholder="Школа (необязательно)" autocomplete="off" />
+              <details class="child-extra-settings">
+                <summary>Дополнительные настройки</summary>
+                <input id="newChildCity" type="text" placeholder="Город (необязательно)" autocomplete="off" />
+                <input id="newChildSchool" type="text" placeholder="Школа (необязательно)" autocomplete="off" />
+              </details>
               <button class="primary-btn" id="createChildBtn" type="button">Добавить ребёнка</button>
             </div>
             <div class="child-card-list" id="childCardList"></div>
@@ -313,13 +319,13 @@
             </div>
             <p class="auth-message" id="childLinkStatus">Родитель увидит ребёнка после привязки по коду.</p>
           </article>
-          <article>
-            <strong>Облачный backend</strong>
-            <p id="cloudBackendText">Сейчас локальный режим. Для общей базы нужен облачный провайдер.</p>
+          <article class="technical-panel">
+            <strong>Служебная информация</strong>
+            <p id="cloudBackendText">Данные сохранены.</p>
           </article>
-          <article>
-            <strong>Авторизация</strong>
-            <p id="authStatusText">Supabase Auth будет подключён после добавления ключей.</p>
+          <article class="technical-panel">
+            <strong>Статус входа</strong>
+            <p id="authStatusText">Кабинет готов к входу по email.</p>
           </article>
         </div>
       </section>
@@ -602,9 +608,13 @@
       <h2>Как пользоваться Mama AI</h2>
       <button class="close-btn" id="closeHelpBtn" type="button" aria-label="Закрыть">×</button>
     </div>
-    <div class="video-placeholder">
+    <div class="video-instruction">
       <strong>Видео: Как начать работать с Mama AI</strong>
-      <span>Сюда позже можно вставить mp4/WebM или ссылку на видео 30–60 секунд.</span>
+      <video id="guideVideo" controls preload="metadata" poster="" aria-label="Видеоинструкция Mama AI">
+        <source id="guideVideoMp4" src="" type="video/mp4" />
+        <source id="guideVideoWebm" src="" type="video/webm" />
+      </video>
+      <span>Видео будет добавлено позже. Когда файл будет готов, сюда можно вставить MP4, WebM или ссылку.</span>
     </div>
     <button class="primary-btn" id="helpShortGuideBtn" type="button">▶ Посмотреть короткую инструкцию</button>
     <button class="ghost-btn" id="helpTourBtn" type="button">Показать прямо на сайте</button>

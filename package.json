@@ -12,6 +12,7 @@
     "public:test": "node scripts/static-public-check.js",
     "mvp:test": "node scripts/mvp-auth-check.js",
     "child-first:test": "node scripts/child-first-check.js",
+    "responsive:test": "node scripts/responsive-ux-check.js",
     "audit:post-supabase": "node scripts/post-supabase-audit.js"
   },
   "engines": {
