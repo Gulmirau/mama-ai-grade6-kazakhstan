@@ -771,6 +771,10 @@ const mobileMenuBtn = document.getElementById("mobileMenuBtn");
 const guestStartBtn = document.getElementById("guestStartBtn");
 const videoGuideBtn = document.getElementById("videoGuideBtn");
 const adultLoginLink = document.getElementById("adultLoginLink");
+const childAccessAlert = document.getElementById("childAccessAlert");
+const childAccessMessage = document.getElementById("childAccessMessage");
+const childAccessParentBtn = document.getElementById("childAccessParentBtn");
+const childAccessGuestBtn = document.getElementById("childAccessGuestBtn");
 const guestStatusPanel = document.getElementById("guestStatusPanel");
 const guestActionsLeft = document.getElementById("guestActionsLeft");
 const guestLimitPanel = document.getElementById("guestLimitPanel");
@@ -1234,8 +1238,9 @@ function renderChildCard(child) {
   card.dataset.childId = child.child_id || child.id || "";
   card.innerHTML = `
     <h4>${child.display_name || "Ребёнок"}</h4>
-    <p>${child.grade || currentGrade} класс · ${(child.learning_language || currentLang || "ru").toUpperCase()}</p>
+    <p>${child.grade || currentGrade} класс · ${(child.learning_language || currentLang || "ru").toUpperCase()} · ${child.status === "active" || !child.status ? "активен" : "нужна новая ссылка"}</p>
     ${link ? `<input readonly value="${link}" aria-label="Личная ссылка ребёнка" />` : ""}
+    ${link ? "" : `<p class="parent-note">Если ребёнок видит «ссылка не активна», нажмите «Обновить ссылку» и отправьте новую.</p>`}
     <div class="feedback-actions">
       ${link ? `<button type="button" class="ghost-btn copy-child-link">Копировать ссылку</button>` : ""}
       ${link ? `<button type="button" class="ghost-btn send-child-link">Отправить</button>` : ""}
@@ -1246,6 +1251,21 @@ function renderChildCard(child) {
     <p class="parent-note child-card-status"></p>
   `;
   childCardList.prepend(card);
+}
+
+async function refreshParentChildren() {
+  if (!childCardList || !window.MamaAiSupabase?.listChildProfiles || !cloudProfile || !["parent", "admin"].includes(cloudProfile.role)) return;
+  try {
+    const children = await window.MamaAiSupabase.listChildProfiles();
+    childCardList.innerHTML = "";
+    if (!children?.length) {
+      childCardList.innerHTML = `<p class="parent-note">Добавьте ребёнка, чтобы он мог заниматься самостоятельно.</p>`;
+      return;
+    }
+    children.forEach((child) => renderChildCard(child));
+  } catch (error) {
+    childCardList.innerHTML = `<p class="parent-note">Не удалось загрузить детей: ${error.message}</p>`;
+  }
 }
 
 async function createChildProfile() {
@@ -1284,13 +1304,15 @@ async function activateChildFromUrl() {
   const token = params.get("child");
   if (!token || !window.MamaAiSupabase?.isConfigured?.()) return false;
   try {
+    if (childAccessAlert) childAccessAlert.hidden = true;
     childSession = await window.MamaAiSupabase.activateChildInvite(token);
     localStorage.setItem(childSessionStorageKey, JSON.stringify({ sessionToken: childSession.session_token }));
     window.history.replaceState({}, document.title, `${window.location.origin}${window.location.pathname}`);
     applyChildSession(childSession);
     return true;
-  } catch {
+  } catch (error) {
     localStorage.removeItem(childSessionStorageKey);
+    showChildAccessProblem(error);
     return false;
   }
 }
@@ -1307,8 +1329,21 @@ async function restoreChildSession() {
   } catch {
     localStorage.removeItem(childSessionStorageKey);
     childSession = null;
+    showChildAccessProblem(new Error("Сессия ребёнка закончилась. Попросите родителя отправить новую ссылку."));
     return false;
   }
+}
+
+function showChildAccessProblem(error) {
+  if (!childAccessAlert || !childAccessMessage) return;
+  const raw = String(error?.message || "");
+  const isInactive = /not active|inactive|expired|revoked|session/i.test(raw);
+  childAccessMessage.textContent = isInactive
+    ? "Эта детская ссылка уже не активна или устарела. Родителю нужно войти в кабинет, открыть «Мои дети», нажать «Обновить ссылку» и отправить ребёнку новую ссылку."
+    : "Не удалось открыть детский кабинет. Родителю нужно войти в кабинет и отправить ребёнку новую ссылку.";
+  setAccessMode("landing");
+  childAccessAlert.hidden = false;
+  window.history.replaceState({}, document.title, `${window.location.origin}${window.location.pathname}`);
 }
 
 function applyChildSession(session) {
@@ -1946,6 +1981,8 @@ function bindEvents() {
   natureSoundBtn.addEventListener("click", toggleNatureSound);
 
   if (guestStartBtn) guestStartBtn.addEventListener("click", () => startGuestMode());
+  if (childAccessParentBtn) childAccessParentBtn.addEventListener("click", openAdultMode);
+  if (childAccessGuestBtn) childAccessGuestBtn.addEventListener("click", () => startGuestMode());
   if (mobileMenuBtn) mobileMenuBtn.addEventListener("click", () => toggleMobileMenu());
   document.querySelectorAll(".nav-list a").forEach((link) => {
     link.addEventListener("click", () => toggleMobileMenu(false));
@@ -2445,6 +2482,9 @@ async function renderAccountAndParent() {
   }
   if (parentCabinetText) {
     parentCabinetText.textContent = "Добро пожаловать 👋 Добавьте ребёнка, чтобы начать. После добавления здесь появится карточка ребёнка, ссылка для входа и прогресс.";
+  }
+  if (cloudProfile && ["parent", "admin"].includes(cloudProfile.role)) {
+    await refreshParentChildren();
   }
   if (currentTopicInsight) {
     currentTopicInsight.textContent = `${subjectLabel(subject.title)}: ${subject.topics[0]}`;

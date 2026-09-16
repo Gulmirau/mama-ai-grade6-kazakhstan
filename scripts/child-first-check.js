@@ -24,6 +24,8 @@ check("parent registration is simplified", index.includes("advanced-auth-field")
 check("guest mode limit exists", script.includes("const GUEST_ACTION_LIMIT = 3") && script.includes("consumeGuestAction"));
 check("guest state uses localStorage only for guest data", script.includes("mamaAiGuestState") && script.includes("mamaAiGuestPoints"));
 check("parent can create child profile", index.includes("newChildName") && script.includes("createChildProfile"));
+check("parent can reload existing child profiles", supabaseClient.includes("listChildProfiles") && script.includes("refreshParentChildren"));
+check("inactive child link shows friendly recovery", index.includes("childAccessAlert") && script.includes("showChildAccessProblem"));
 check("child links use hashed database tokens", migration.includes("token_hash") && migration.includes("token_sha256") && !migration.includes("invite_token text not null"));
 check("child session is validated through Supabase RPC", supabaseClient.includes("activateChildInvite") && supabaseClient.includes("getChildSession"));
 check("child progress can be saved", migration.includes("save_child_progress") && supabaseClient.includes("saveChildProgress"));

@@ -1088,6 +1088,27 @@ body.theme-disabled .daily-theme-layer {
   text-decoration: underline;
 }
 
+.child-access-alert {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid rgba(236, 106, 91, 0.34);
+  border-radius: 18px;
+  background: #fff6f4;
+  color: var(--ink);
+}
+
+.child-access-alert strong {
+  color: var(--coral);
+}
+
+.child-access-alert p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .landing-demo {
   display: grid;
   gap: 14px;

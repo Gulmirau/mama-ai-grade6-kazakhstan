@@ -301,6 +301,12 @@
     return rows?.[0] || null;
   }
 
+  async function listChildProfiles() {
+    const session = getSession();
+    if (!session?.user?.id || !isConfigured()) throw new Error("login_required");
+    return request("/rest/v1/child_profiles?select=id,display_name,grade,learning_language,points,level,status,created_at&order=created_at.desc");
+  }
+
   async function rotateChildInvite(childId) {
     const session = getSession();
     if (!session?.user?.id || !isConfigured()) throw new Error("login_required");
@@ -382,6 +388,7 @@
     saveFeedback,
     linkChildByCode,
     createChildProfile,
+    listChildProfiles,
     rotateChildInvite,
     revokeChildInvite,
     activateChildInvite,
