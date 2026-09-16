@@ -20,7 +20,7 @@ Important audit note: the automated signup check on 2026-08-11 was blocked by Su
 
 ## 2026-08-14 Public UX Simplification
 
-- Public first screen was simplified to three clear choices: "Начать заниматься", "Войти", and "Как пользоваться".
+- Public first screen was simplified to child-first access: "Учиться без регистрации", optional child name, "Родителям", and "Как пользоваться".
 - The large navigation menu is hidden from new visitors and guests.
 - Guest mode now starts with a guided 3-step flow: choose grade, choose subject, choose help type.
 - Parent registration is visually simplified to the minimum first-step fields: name, email, password, and role.
