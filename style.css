@@ -1044,6 +1044,29 @@ body.theme-disabled .daily-theme-layer {
   line-height: 1.55;
 }
 
+.quick-name-field {
+  display: grid;
+  gap: 7px;
+  max-width: 420px;
+  margin: 18px 0 4px;
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.quick-name-field span {
+  font-size: 13px;
+}
+
+.quick-name-field input {
+  min-height: 52px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0 14px;
+  color: var(--ink);
+  box-shadow: 0 10px 26px rgba(31, 41, 51, 0.06);
+}
+
 .landing-actions,
 .guide-controls,
 .feedback-actions {
@@ -1057,6 +1080,10 @@ body.theme-disabled .daily-theme-layer {
   min-height: 50px;
   padding-inline: 20px;
   font-size: 16px;
+}
+
+.adult-link-btn {
+  opacity: 0.86;
 }
 
 .landing-language {

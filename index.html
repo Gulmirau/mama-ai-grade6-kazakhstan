@@ -64,9 +64,13 @@
           <p class="eyebrow">Mama AI</p>
           <h1>Привет! Я Mama AI 👋</h1>
           <p class="landing-lead">Помогу с домашним заданием и объясню сложную тему простыми словами.</p>
+          <label class="quick-name-field">
+            <span>Имя ребёнка, можно не писать</span>
+            <input id="quickChildName" type="text" placeholder="Например: Аружан" autocomplete="given-name" />
+          </label>
           <div class="landing-actions">
-            <button class="primary-btn big-action" id="guestStartBtn" type="button">Начать заниматься</button>
-            <button class="ghost-btn big-action" id="adultLoginLink" type="button">Войти</button>
+            <button class="primary-btn big-action" id="guestStartBtn" type="button">Учиться без регистрации</button>
+            <button class="ghost-btn big-action adult-link-btn" id="adultLoginLink" type="button">Родителям</button>
           </div>
           <div class="landing-language" aria-label="Язык интерфейса">
             <button class="lang-btn active" data-lang="ru" type="button">Русский</button>
@@ -92,8 +96,8 @@
       </section>
 
       <section class="guest-status-panel" id="guestStatusPanel" hidden>
-        <strong id="guestModeTitle">Гостевой режим</strong>
-        <span id="guestActionsLeft">Можно попробовать ещё 3 задания</span>
+        <strong id="guestModeTitle">Учимся без регистрации</strong>
+        <span id="guestActionsLeft">Можно сразу задавать вопросы и разбирать задания.</span>
       </section>
 
       <section class="guest-wizard" id="guestWizard" hidden>
@@ -114,8 +118,8 @@
       </section>
 
       <section class="guest-limit-panel" id="guestLimitPanel" hidden>
-        <h2>Тебе понравилось заниматься с Mama Ai?</h2>
-        <p>Попроси родителя создать бесплатный профиль. Тогда мы сохраним твои баллы, достижения и прогресс, а ты сможешь продолжить обучение.</p>
+        <h2>Можно продолжать без регистрации</h2>
+        <p>Если когда-нибудь захотите сохранять прогресс на разных устройствах, взрослый сможет создать кабинет позже. Сейчас ребёнок может просто заниматься.</p>
         <div class="benefit-grid">
           <span>Сохранение баллов</span>
           <span>История занятий</span>
@@ -125,9 +129,9 @@
           <span>Кабинет родителя</span>
         </div>
         <div class="landing-actions">
-          <button class="primary-btn" id="callParentBtn" type="button">Позвать родителя</button>
-          <button class="ghost-btn" id="continueGuestBtn" type="button">Продолжить знакомство</button>
-          <button class="ghost-btn" id="profileHowBtn" type="button">Как создать профиль</button>
+          <button class="primary-btn" id="continueGuestBtn" type="button">Продолжить заниматься</button>
+          <button class="ghost-btn" id="callParentBtn" type="button">Войти родителю</button>
+          <button class="ghost-btn" id="profileHowBtn" type="button">Зачем нужен кабинет?</button>
         </div>
       </section>
 

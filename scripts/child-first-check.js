@@ -15,13 +15,14 @@ const style = read("style.css");
 const supabaseClient = read("supabase-client.js");
 const migration = read("supabase/migrations/202608120001_child_guest_and_invites.sql");
 
-check("landing screen exists", index.includes('id="landing"') && index.includes("Начать заниматься") && index.includes("Войти"));
+check("landing screen exists", index.includes('id="landing"') && index.includes("Учиться без регистрации") && index.includes("Родителям"));
+check("child can start without auth", index.includes("quickChildName") && script.includes("Можно учиться без регистрации"));
 check("guest wizard exists", index.includes('id="guestWizard"') && index.includes("В каком ты классе?") && script.includes("renderGuestWizard"));
 check("guest wizard has four simple actions", index.includes("actionPhotoBtn") && index.includes("actionQuestionBtn") && index.includes("actionTopicBtn") && index.includes("actionAssessmentBtn"));
 check("help drawer exists", index.includes('id="helpDrawer"') && index.includes("Показать прямо на сайте") && script.includes("openHelpDrawer"));
 check("adult registration is not first screen", index.includes('class="profile-panel adult-panel"') && style.includes("body.landing-active .sidebar"));
 check("parent registration is simplified", index.includes("advanced-auth-field") && style.includes(".advanced-auth-field") && index.includes("Создать кабинет"));
-check("guest mode limit exists", script.includes("const GUEST_ACTION_LIMIT = 3") && script.includes("consumeGuestAction"));
+check("guest mode is unlimited for children", script.includes("Number.POSITIVE_INFINITY") && script.includes("consumeGuestAction"));
 check("guest state uses localStorage only for guest data", script.includes("mamaAiGuestState") && script.includes("mamaAiGuestPoints"));
 check("parent can create child profile", index.includes("newChildName") && script.includes("createChildProfile"));
 check("parent can reload existing child profiles", supabaseClient.includes("listChildProfiles") && script.includes("refreshParentChildren"));

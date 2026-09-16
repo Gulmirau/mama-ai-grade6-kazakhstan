@@ -695,7 +695,7 @@ let lastAnswerText = "";
 let recognition = null;
 let clockTimer = null;
 let birdAudio = null;
-const GUEST_ACTION_LIMIT = 3;
+const GUEST_ACTION_LIMIT = Number.POSITIVE_INFINITY;
 const guestStorageKey = "mamaAiGuestState";
 const childSessionStorageKey = "mamaAiChildSession";
 let appAccessMode = "landing";
@@ -768,6 +768,7 @@ const adminStudentRows = document.getElementById("adminStudentRows");
 const inactiveStudentList = document.getElementById("inactiveStudentList");
 const landingPanel = document.getElementById("landing");
 const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+const quickChildName = document.getElementById("quickChildName");
 const guestStartBtn = document.getElementById("guestStartBtn");
 const videoGuideBtn = document.getElementById("videoGuideBtn");
 const adultLoginLink = document.getElementById("adultLoginLink");
@@ -869,30 +870,23 @@ function updateGuestPanel() {
   const isGuest = appAccessMode === "guest";
   guestStatusPanel.hidden = !isGuest;
   if (!isGuest) return;
-  const left = Math.max(0, GUEST_ACTION_LIMIT - guestState.actionsUsed);
-  guestActionsLeft.textContent = left > 0
-    ? `Можно попробовать ещё ${left} задания`
-    : "Пробный лимит закончился. Родитель может создать профиль и сохранить прогресс.";
+  const name = studentName?.value?.trim();
+  guestActionsLeft.textContent = name
+    ? `${name}, можно задавать вопросы и разбирать задания без регистрации.`
+    : "Можно задавать вопросы и разбирать задания без регистрации.";
 }
 
 function showGuestLimit() {
-  guestState.limited = true;
-  saveGuestState();
   updateGuestPanel();
-  if (guestLimitPanel) guestLimitPanel.hidden = false;
 }
 
 function consumeGuestAction(pointsDelta = 0) {
   if (appAccessMode !== "guest") return true;
-  if (guestState.actionsUsed >= GUEST_ACTION_LIMIT) {
-    showGuestLimit();
-    return false;
-  }
   guestState.actionsUsed += 1;
   guestState.points = Math.max(0, Number(guestState.points || 0) + Number(pointsDelta || 0));
+  points = Math.max(points, guestState.points);
   saveGuestState();
   updateGuestPanel();
-  if (guestState.actionsUsed >= GUEST_ACTION_LIMIT) showGuestLimit();
   return true;
 }
 
@@ -908,6 +902,11 @@ function getGuestProgressPayload() {
 }
 
 function startGuestMode(silent = false) {
+  const quickName = quickChildName?.value.trim();
+  if (quickName && studentName) {
+    studentName.value = quickName;
+    localStorage.setItem("mamaAiStudentName", quickName);
+  }
   currentGrade = Number(guestState.grade || currentGrade || 6);
   currentLang = guestState.learningLanguage || currentLang || "ru";
   points = Math.max(Number(points || 0), Number(guestState.points || 0));
@@ -920,7 +919,7 @@ function startGuestMode(silent = false) {
   setAccessMode("guest");
   renderAll();
   renderGuestWizard();
-  if (!silent) addMessage("bot success", "Можно попробовать Mama Ai бесплатно: выбери класс, предмет и задай вопрос. Я объясню по шагам, как терпеливый репетитор.");
+  if (!silent) addMessage("bot success", "Можно учиться без регистрации: выбери класс, предмет и задай вопрос. Я объясню по шагам, как терпеливый репетитор.");
 }
 
 function renderGuestWizard() {
@@ -1042,12 +1041,12 @@ function openParentHome() {
 }
 
 const guideSlidesData = [
-  { title: "1. Начало без регистрации", body: "Ребёнок нажимает «Начать заниматься» и сразу попадает в учебный режим." },
+  { title: "1. Начало без регистрации", body: "Ребёнок нажимает «Учиться без регистрации» и сразу попадает в учебный режим." },
   { title: "2. Выбор класса", body: "Mama Ai подстраивает объяснение под 1–11 класс: младшим проще, старшим глубже." },
   { title: "3. Предмет и тема", body: "Можно выбрать школьный предмет, мини-тест, СОР, СОЧ или подготовку к ЕНТ там, где это подходит классу." },
   { title: "4. Объяснение по шагам", body: "AI не даёт только ответ, а спрашивает, подсказывает и ведёт ребёнка через ход решения." },
   { title: "5. Баллы и похвала", body: "За попытку, старание и правильный ответ ребёнок получает баллы и спокойную награду." },
-  { title: "6. Родительский кабинет", body: "Родитель создаёт профиль ребёнка, получает личную ссылку и видит прогресс только своих детей." }
+  { title: "6. Родительский кабинет", body: "Кабинет нужен только если взрослый хочет сохранять прогресс и видеть занятия ребёнка." }
 ];
 
 function renderGuideSlide() {
@@ -1071,7 +1070,7 @@ function closeGuideModal() {
 const guidedTourSteps = [
   {
     selector: "#guestStartBtn",
-    text: "Сначала нажимаем кнопку Начать заниматься. Ребёнок может начать без регистрации.",
+    text: "Сначала нажимаем кнопку Учиться без регистрации. Ребёнок может начать сам, без email и пароля.",
     before: () => setAccessMode("landing")
   },
   {
@@ -1108,7 +1107,7 @@ const guidedTourSteps = [
   },
   {
     selector: "#adultLoginLink",
-    text: "Если нужно сохранить прогресс, родитель нажимает Войти.",
+    text: "Если взрослый хочет сохранять прогресс, можно открыть раздел Родителям.",
     before: () => setAccessMode("landing")
   },
   {
@@ -2053,7 +2052,7 @@ function bindEvents() {
   if (callParentBtn) callParentBtn.addEventListener("click", openAdultMode);
   if (continueGuestBtn) continueGuestBtn.addEventListener("click", () => {
     if (guestLimitPanel) guestLimitPanel.hidden = true;
-    addMessage("bot", "Можно дальше смотреть темы и предметы. Чтобы я сохраняла новые ответы и баллы, попроси родителя создать профиль.");
+    addMessage("bot", "Можно продолжать заниматься без регистрации. Кабинет взрослого понадобится только для сохранения прогресса на разных устройствах.");
   });
   if (createChildBtn) createChildBtn.addEventListener("click", createChildProfile);
   if (childCardList) {
@@ -2676,7 +2675,7 @@ async function sendMessage() {
   const text = userInput.value.trim();
   if (!text) return;
   if (!consumeGuestAction(2)) {
-    addMessage("bot", "Пробные задания закончились. Можно смотреть предметы дальше, а для новых сохранённых ответов попроси родителя создать профиль.");
+    addMessage("bot", "Можно продолжать заниматься без регистрации. Выбери предмет или напиши вопрос.");
     return;
   }
 
@@ -2947,7 +2946,7 @@ function getLanguageMessage() {
 
 function checkQuizAnswer(button) {
   if (!consumeGuestAction(1)) {
-    quizResult.textContent = "Пробный лимит закончился. Попроси родителя создать профиль, чтобы продолжить с сохранением баллов.";
+    quizResult.textContent = "Можно продолжать без регистрации. Попробуй ещё раз или выбери другой вопрос.";
     return;
   }
   const isCorrect = button.dataset.correct === "true";
