@@ -1,6 +1,6 @@
 # Mama AI Project Status
 
-Last updated: 2026-08-17
+Last updated: 2026-09-20
 
 ## Summary
 
@@ -55,7 +55,7 @@ Important: apply `supabase/migrations/202608120001_child_guest_and_invites.sql` 
 | Subject filtering | WORKING | Content tests + public UI checks | 3rd grade includes `Познание мира`; 5th grade required subjects exist; 6th grade materials preserved | Subject list still should be reviewed annually against official curriculum updates |
 | Textbook filtering | WORKING | Public checks for 3rd grade `Познание мира` and 6th grade `Информатика` | Materials filter by selected grade and subject; no 5/7 grade leakage in checked scenarios | Some subjects have no verified main resource |
 | Official textbook catalog | PARTIAL | Coverage report regenerated | 288 official metadata/link records are available | Metadata is not full textbook text or RAG knowledge chunks |
-| User materials | PARTIAL | Coverage report regenerated | 17 user-provided records for grades 3, 5, and 6 are preserved | Scans/photos need OCR and human review |
+| User materials | PARTIAL | Coverage report regenerated | 24 user-provided records for grades 3, 5, and 6 are preserved | Scans/photos and cover-only records need OCR and human review |
 | Knowledge chunks / RAG | NOT IMPLEMENTED | Schema audit | Architecture exists | No real `knowledge_chunks` textbook-page corpus; AI does not search page chunks yet |
 | AI tutor chat | DEMO | Code audit | Step-by-step tutor fallback works in browser | No secure backend AI/RAG pipeline on GitHub Pages |
 | Photo / OCR | DEMO | Code audit | Photo UI and endpoint placeholders exist | No real OCR/vision backend |
@@ -72,7 +72,7 @@ Important: apply `supabase/migrations/202608120001_child_guest_and_invites.sql` 
 ## Current Counts
 
 - Official textbook metadata records: 288
-- User-provided material records: 17
+- User-provided material records: 24
 - Grades covered in report: 1-11
 - Public audit: 14 passed, 0 failed, 1 blocked by Supabase email rate limit
 

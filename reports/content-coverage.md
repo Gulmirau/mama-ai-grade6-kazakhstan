@@ -1,15 +1,15 @@
 # Mama AI Content Coverage
 
-Generated: 2026-08-11T04:23:11.979Z
+Generated: 2026-09-20T07:04:33.468Z
 
 Official catalog records: 288
-User-provided records: 17
+User-provided records: 24
 
 | Класс | Предметов | С учебником | Частично | Нет источника | Наполнение |
 | ----- | --------: | ----------: | -------: | ------------: | ---------: |
 | 1 | 10 | 6 | 0 | 4 | 60% |
 | 2 | 11 | 7 | 0 | 4 | 64% |
-| 3 | 11 | 8 | 0 | 3 | 73% |
+| 3 | 11 | 8 | 2 | 1 | 91% |
 | 4 | 11 | 8 | 0 | 3 | 73% |
 | 5 | 15 | 10 | 1 | 4 | 73% |
 | 6 | 15 | 11 | 0 | 4 | 73% |
@@ -56,17 +56,17 @@ User-provided records: 17
 
 | Предмет | Материалов | Статус |
 | ------- | ---------: | ------ |
-| Русский язык | 1 | main textbook found |
+| Русский язык | 3 | main textbook found |
 | Литературное чтение | 1 | main textbook found |
 | Казахский язык | 1 | main textbook found |
-| Английский язык | 0 | no verified source |
-| Математика | 1 | main textbook found |
+| Английский язык | 1 | additional only |
+| Математика | 3 | main textbook found |
 | Познание мира | 2 | main textbook found |
 | Естествознание | 1 | main textbook found |
 | Художественный труд | 7 | main textbook found |
-| Музыка | 1 | main textbook found |
+| Музыка | 2 | main textbook found |
 | Физическая культура | 0 | no verified source |
-| Цифровая грамотность | 0 | no verified source |
+| Цифровая грамотность | 1 | additional only |
 
 ### 4 класс
 

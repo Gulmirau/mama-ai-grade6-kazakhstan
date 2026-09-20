@@ -164,6 +164,125 @@
         "user_scan: Whatsapp Scan 19 июля 2026 г. at 11.20.49.pdf"
       ],
       "status": "uploaded_awaiting_ocr"
+    },
+    {
+      "entityType": "workbook",
+      "id": "wb_grade3_ru_russian_shklyarova_school_home",
+      "title": "Русский язык. Учимся в школе и дома. 3 класс",
+      "publisher": "awaiting_review",
+      "grade": 3,
+      "language": "ru",
+      "subject": "russian",
+      "subjectTitle": "Русский язык",
+      "authors": ["Т. В. Шклярова"],
+      "edition": "awaiting_review",
+      "downloadableResource": "cover_only_awaiting_full_scan",
+      "sourceReferences": [
+        "user_photo: codex-clipboard-a1f6e28c-3246-41cd-bff5-1619e6067549.png"
+      ],
+      "status": "imported_needs_review"
+    },
+    {
+      "entityType": "workbook",
+      "id": "wb_grade3_ru_integrated_young_scholars_parts_1_2",
+      "title": "Юным умникам и умницам. Информатика, логика, математика. Рабочая тетрадь. 3 класс. Части 1 и 2",
+      "publisher": "awaiting_review",
+      "grade": 3,
+      "language": "ru",
+      "subject": "digital_literacy",
+      "subjectTitle": "Цифровая грамотность",
+      "authors": ["О. А. Холодова"],
+      "edition": "awaiting_review",
+      "downloadableResource": "cover_only_awaiting_full_scan",
+      "sourceReferences": [
+        "user_photo: codex-clipboard-36c14a05-b1be-4c30-9cce-97961ddce275.png"
+      ],
+      "status": "imported_needs_review"
+    },
+    {
+      "entityType": "workbook",
+      "id": "wb_grade3_ru_music_parts_1_2",
+      "title": "Музыка. Рабочая тетрадь. 3 класс. Части 1 и 2",
+      "publisher": "awaiting_review",
+      "grade": 3,
+      "language": "ru",
+      "subject": "music",
+      "subjectTitle": "Музыка",
+      "authors": [],
+      "edition": "awaiting_review",
+      "downloadableResource": "cover_only_awaiting_full_scan",
+      "sourceReferences": [
+        "user_photo: codex-clipboard-f25c9b17-3104-4e4b-9484-7cb62a539276.png"
+      ],
+      "status": "imported_needs_review"
+    },
+    {
+      "entityType": "workbook",
+      "id": "wb_grade3_ru_russian_golub_knowledge_control",
+      "title": "Тематический контроль знаний учащихся. Русский язык. 3 класс. Зачетная тетрадь",
+      "publisher": "awaiting_review",
+      "grade": 3,
+      "language": "ru",
+      "subject": "russian",
+      "subjectTitle": "Русский язык",
+      "authors": ["В. Т. Голубь"],
+      "edition": "awaiting_review",
+      "downloadableResource": "cover_only_awaiting_full_scan",
+      "sourceReferences": [
+        "user_photo: codex-clipboard-8c53698d-e3b2-48d6-b495-9b5cc12d9795.png"
+      ],
+      "status": "imported_needs_review"
+    },
+    {
+      "entityType": "workbook",
+      "id": "wb_grade3_en_english_language_kazakhstan_activity_book",
+      "title": "English Language for Kazakhstan. Grade 3. Activity Book",
+      "publisher": "Express Publishing",
+      "grade": 3,
+      "language": "en",
+      "subject": "english",
+      "subjectTitle": "Английский язык",
+      "authors": ["Jenny Dooley", "Bob Obee"],
+      "edition": "awaiting_review",
+      "downloadableResource": "cover_only_awaiting_full_scan",
+      "sourceReferences": [
+        "user_photo: codex-clipboard-da453281-adf2-43a8-b255-3021fab67551.png"
+      ],
+      "status": "imported_needs_review"
+    },
+    {
+      "entityType": "workbook",
+      "id": "wb_grade3_ru_math_uzorova_nefedova_lessons_olympiads",
+      "title": "Задачи по математике для уроков и олимпиад. 3 класс",
+      "publisher": "Образовательный проект",
+      "grade": 3,
+      "language": "ru",
+      "subject": "math",
+      "subjectTitle": "Математика",
+      "authors": ["О. В. Узорова", "Е. А. Нефедова"],
+      "edition": "awaiting_review",
+      "downloadableResource": "cover_only_awaiting_full_scan",
+      "sourceReferences": [
+        "user_photo: codex-clipboard-6f94bf52-4645-492c-8a58-f3e30aeeab3c.png"
+      ],
+      "status": "imported_needs_review"
+    },
+    {
+      "entityType": "textbook",
+      "id": "tb_grade3_ru_math_peterson_part_1",
+      "title": "Математика. 3 класс. Непрерывный курс математики. Часть 1",
+      "publisher": "Нұр-Сұлтан баспасы",
+      "grade": 3,
+      "language": "ru",
+      "subject": "math",
+      "subjectTitle": "Математика",
+      "authors": ["Л. Г. Петерсон"],
+      "edition": "awaiting_review",
+      "downloadableResource": "cover_only_awaiting_full_scan",
+      "sourceReferences": [
+        "user_photo: codex-clipboard-cc735dc9-64fe-4833-b71d-1caddd0a4ca8.png"
+      ],
+      "status": "imported_needs_review"
     }
   ]
 }
