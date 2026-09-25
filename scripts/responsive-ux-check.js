@@ -47,6 +47,17 @@ async function main() {
     await page.goto(pageUrl);
     await page.waitForSelector("#guestStartBtn");
 
+    if (viewport.width === viewports[0].width) {
+      const catalogState = await page.evaluate(() => ({
+        count: Array.isArray(window.OFFICIAL_TEXTBOOK_CATALOG) ? window.OFFICIAL_TEXTBOOK_CATALOG.length : 0,
+        hasKazakh: window.OFFICIAL_TEXTBOOK_CATALOG?.some((record) => record.instructionLanguage === "kk") || false,
+        hasModule: Boolean(document.querySelector("#textbookCatalog"))
+      }));
+      if (catalogState.count < 500 || !catalogState.hasKazakh || !catalogState.hasModule) {
+        failures.push(`${viewport.width}: textbook catalog failed ${JSON.stringify(catalogState)}`);
+      }
+    }
+
     let result = await hasHorizontalOverflow(page);
     if (result.overflow) failures.push(`${viewport.width}: landing overflow ${JSON.stringify(result)}`);
 
