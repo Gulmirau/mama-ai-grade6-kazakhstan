@@ -1494,6 +1494,7 @@ function getOrCreateStudent(db, session, body) {
 }
 
 function normalizeTutorRequest(body, student) {
+  const selected = body.selectedTextbook && typeof body.selectedTextbook === "object" ? body.selectedTextbook : null;
   return {
     studentName: student.name,
     grade: clampGrade(body.grade || student.grade),
@@ -1503,7 +1504,21 @@ function normalizeTutorRequest(body, student) {
     mode: cleanText(body.mode || "school"),
     language: cleanText(body.language || "ru"),
     difficulty: cleanText(body.difficulty || "средний"),
-    question: cleanText(body.question || body.text || "")
+    question: cleanText(body.question || body.text || ""),
+    selectedTextbook: selected ? {
+      id: cleanText(selected.id || ""),
+      grade: clampGrade(selected.grade || body.grade || student.grade),
+      subjectKey: cleanText(selected.subjectKey || ""),
+      title: cleanText(selected.title || ""),
+      authors: Array.isArray(selected.authors) ? selected.authors.map((item) => cleanText(item)).filter(Boolean).slice(0, 12) : [],
+      publisher: cleanText(selected.publisher || ""),
+      year: cleanText(selected.year || ""),
+      part: cleanText(selected.part || ""),
+      instructionLanguage: cleanText(selected.instructionLanguage || ""),
+      pathway: cleanText(selected.pathway || "general"),
+      actualityStatus: cleanText(selected.actualityStatus || "review"),
+      sourceUrl: cleanText(selected.sourceUrl || "")
+    } : null
   };
 }
 
@@ -1526,6 +1541,10 @@ async function askOpenAI(promptData, imageData) {
             "If language is en: answer in clear school English, correct grammar, no slang unless requested, adapt explanations to the student's grade.",
             "Before generating an answer, use knowledgeContext. Priority: official curriculum, textbooks, SOR/SOCH, teacher materials, then AI explanation.",
             "Never invent school facts when verified educational material exists.",
+            "Use selectedTextbook exactly when it is provided: grade, subject, title, authors, publisher, edition, part, and instruction language.",
+            "If selectedTextbook is missing and the request refers to a page or exercise while several textbook editions may exist, ask the student to select the textbook or upload a photo. Never guess the edition.",
+            "Teach in stages: explain the task, give one hint, ask the child to try, give the next hint, solve together, and show a full solution only when needed.",
+            "For an uploaded image, first identify the likely subject, textbook page, exercise number, and task text. Clearly state uncertainty when any detail is unreadable and ask for a clearer photo instead of inventing it.",
             "If knowledgeContext has no results and says awaitingImport, clearly say that official materials are awaiting import and provide only a general learning strategy, not fictional curriculum facts."
           ].join(" ")
         }

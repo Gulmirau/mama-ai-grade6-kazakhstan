@@ -362,6 +362,42 @@
     });
   }
 
+  async function saveTextbookSelection(payload) {
+    if (!isConfigured()) return null;
+    if (payload.childSessionToken) {
+      return request("/rest/v1/rpc/save_child_textbook_selection", {
+        method: "POST",
+        body: JSON.stringify({
+          raw_session: payload.childSessionToken,
+          textbook_external_id: payload.textbookId,
+          selected_grade: Number(payload.grade),
+          selected_language: payload.instructionLanguage || "ru",
+          selected_subject: payload.subjectKey || "",
+          textbook_snapshot: payload.snapshot || {}
+        })
+      });
+    }
+    const session = getSession();
+    if (!session?.user?.id) return null;
+    const row = {
+      user_id: session.user.id,
+      profile_scope: payload.profileScope || "account",
+      textbook_external_id: payload.textbookId,
+      grade: Number(payload.grade),
+      instruction_language: payload.instructionLanguage || "ru",
+      subject_key: payload.subjectKey || "",
+      textbook_snapshot: payload.snapshot || {},
+      last_opened_at: new Date().toISOString()
+    };
+    const rows = await request("/rest/v1/user_textbook_selections?on_conflict=user_id,profile_scope,grade,instruction_language,subject_key", {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+      body: JSON.stringify(row)
+    });
+    await recordEvent("textbook_selected", payload.textbookId || "Textbook selected");
+    return rows?.[0] || row;
+  }
+
   async function getAnalytics() {
     const [profiles, events, attempts, feedbackRows] = await Promise.all([
       request("/rest/v1/profiles?select=id,role,grade,city,status,last_active_at,created_at"),
@@ -394,6 +430,7 @@
     activateChildInvite,
     getChildSession,
     saveChildProgress,
+    saveTextbookSelection,
     getAnalytics
   };
 })();

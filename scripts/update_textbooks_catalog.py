@@ -10,7 +10,10 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CURRENT_JSON = PROJECT_ROOT / "knowledge_base" / "gov_kz_textbooks_1_11_official.json"
 REPORT_PATH = PROJECT_ROOT / "reports" / "textbooks-update-report.md"
-SOURCE_URL = "https://www.gov.kz/memleket/entities/edu/documents/details/892700?lang=ru"
+SOURCE_URLS = {
+    "ru": "https://www.gov.kz/memleket/entities/edu/documents/details/892700?lang=ru",
+    "kk": "https://www.gov.kz/memleket/entities/edu/documents/details/892700?lang=kk"
+}
 EXTRACTOR_PATH = PROJECT_ROOT / "scripts" / "extract-gov-kz-textbooks.py"
 
 
@@ -39,14 +42,19 @@ def main() -> None:
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
     extractor = load_extractor()
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".html") as tmp:
-        html_path = Path(tmp.name)
-        tmp.write(urllib.request.urlopen(SOURCE_URL, timeout=30).read())
+    temp_paths = {}
+    for language, source_url in SOURCE_URLS.items():
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f"-{language}.html") as tmp:
+            temp_paths[language] = Path(tmp.name)
+            tmp.write(urllib.request.urlopen(source_url, timeout=30).read())
 
-    original_source = extractor.SOURCE_HTML
-    extractor.SOURCE_HTML = html_path
+    original_ru = extractor.SOURCE_HTML
+    original_kk = extractor.SOURCE_HTML_KK
+    extractor.SOURCE_HTML = temp_paths["ru"]
+    extractor.SOURCE_HTML_KK = temp_paths["kk"]
     fresh_records = extractor.parse_records()
-    extractor.SOURCE_HTML = original_source
+    extractor.SOURCE_HTML = original_ru
+    extractor.SOURCE_HTML_KK = original_kk
 
     current_payload = json.loads(CURRENT_JSON.read_text(encoding="utf-8")) if CURRENT_JSON.exists() else {"records": []}
     current_records = current_payload.get("records", [])
@@ -64,7 +72,7 @@ def main() -> None:
     lines = [
         "# Textbooks Update Report",
         "",
-        f"Source: {SOURCE_URL}",
+        f"Sources: {', '.join(SOURCE_URLS.values())}",
         f"Current records: {len(current_records)}",
         f"Fresh records: {len(fresh_records)}",
         "",
@@ -104,7 +112,8 @@ def main() -> None:
     lines.append("")
 
     REPORT_PATH.write_text("\n".join(lines), encoding="utf-8")
-    html_path.unlink(missing_ok=True)
+    for html_path in temp_paths.values():
+        html_path.unlink(missing_ok=True)
     print(f"added={len(added)} removed={len(removed)} changed={len(changed)}")
     print(REPORT_PATH)
 

@@ -92,11 +92,26 @@ CREATE TABLE competencies (
 CREATE TABLE textbooks (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
+  authors_json TEXT,
   publisher TEXT,
   grade_id TEXT REFERENCES grades(id),
   language_id TEXT REFERENCES languages(id),
+  instruction_language TEXT NOT NULL DEFAULT 'ru',
   subject_id TEXT REFERENCES subjects(id),
   edition TEXT,
+  publication_year TEXT,
+  part TEXT,
+  pathway TEXT NOT NULL DEFAULT 'general',
+  academic_year TEXT,
+  official_source_url TEXT,
+  electronic_url TEXT,
+  workbook_url TEXT,
+  additional_materials_url TEXT,
+  cover_url TEXT,
+  access_status TEXT NOT NULL DEFAULT 'requires_review',
+  actuality_status TEXT NOT NULL DEFAULT 'review',
+  previous_version_id TEXT REFERENCES textbooks(id),
+  checked_at TEXT,
   resource_file_id TEXT REFERENCES files(id),
   status TEXT NOT NULL DEFAULT 'awaiting_import'
 );
@@ -121,12 +136,34 @@ CREATE TABLE workbooks (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   type TEXT,
+  textbook_id TEXT REFERENCES textbooks(id),
   grade_id TEXT REFERENCES grades(id),
   language_id TEXT REFERENCES languages(id),
+  instruction_language TEXT NOT NULL DEFAULT 'ru',
   subject_id TEXT REFERENCES subjects(id),
   edition TEXT,
+  publisher TEXT,
+  academic_year TEXT,
+  official_source_url TEXT,
+  electronic_url TEXT,
+  cover_url TEXT,
+  access_status TEXT NOT NULL DEFAULT 'requires_review',
+  actuality_status TEXT NOT NULL DEFAULT 'review',
   resource_file_id TEXT REFERENCES files(id),
   status TEXT NOT NULL DEFAULT 'awaiting_import'
+);
+
+CREATE TABLE student_textbook_selections (
+  id TEXT PRIMARY KEY,
+  student_id TEXT NOT NULL,
+  textbook_id TEXT NOT NULL REFERENCES textbooks(id),
+  grade_id TEXT REFERENCES grades(id),
+  subject_id TEXT REFERENCES subjects(id),
+  instruction_language TEXT NOT NULL,
+  selected_at TEXT NOT NULL,
+  last_opened_at TEXT,
+  is_favorite INTEGER NOT NULL DEFAULT 0,
+  UNIQUE(student_id, grade_id, subject_id, instruction_language)
 );
 
 CREATE TABLE workbook_exercises (

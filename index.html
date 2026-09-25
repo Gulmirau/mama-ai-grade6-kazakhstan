@@ -23,7 +23,7 @@
         <a href="#profile" class="active" data-i18n="navProfile">Профиль</a>
         <a href="#account">Кабинет</a>
         <a href="#learn" data-i18n="navLearn">Учеба</a>
-        <a href="#textbooks" data-i18n="navTextbooks">Учебники</a>
+        <a href="#textbookCatalog" data-i18n="navTextbooks">Учебники</a>
         <a href="#knowledge" data-i18n="knowledgeBase">База знаний</a>
         <a href="#assistant" data-i18n="navAssistant">Помощник</a>
         <a href="#smartPlan">План</a>
@@ -69,8 +69,8 @@
             <input id="quickChildName" type="text" placeholder="Например: Аружан" autocomplete="given-name" />
           </label>
           <div class="landing-actions">
-            <button class="primary-btn big-action" id="guestStartBtn" type="button">Учиться без регистрации</button>
-            <button class="ghost-btn big-action adult-link-btn" id="adultLoginLink" type="button">Родителям</button>
+            <button class="primary-btn big-action" id="guestStartBtn" type="button">Я ученик — начать учиться</button>
+            <button class="ghost-btn big-action adult-link-btn" id="adultLoginLink" type="button">Я родитель</button>
           </div>
           <div class="landing-language" aria-label="Язык интерфейса">
             <button class="lang-btn active" data-lang="ru" type="button">Русский</button>
@@ -344,6 +344,110 @@
 
       <section class="subject-grid" id="learn" aria-label="Предметы"></section>
 
+      <section class="textbook-catalog-panel" id="textbookCatalog">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow" data-i18n="textbookCatalogEyebrow">Учебники и рабочие тетради Казахстана</p>
+            <h2 data-i18n="textbookCatalogTitle">Выбери учебник, по которому занимаешься</h2>
+          </div>
+          <span class="pill">2026–2027</span>
+        </div>
+
+        <div class="catalog-stats" id="catalogStats" aria-label="Сводка каталога"></div>
+
+        <label class="catalog-search">
+          <span data-i18n="catalogSearchLabel">Найти учебник</span>
+          <input id="catalogSearch" type="search" placeholder="Например: Математика 3 класс Акпаева" autocomplete="off" />
+        </label>
+
+        <div class="catalog-steps" aria-label="Порядок выбора">
+          <span><b>1</b><em data-i18n="catalogStepGrade">Класс</em></span>
+          <span><b>2</b><em data-i18n="catalogStepLanguage">Язык обучения</em></span>
+          <span><b>3</b><em data-i18n="catalogStepSubject">Предмет</em></span>
+          <span><b>4</b><em data-i18n="catalogStepBook">Учебник</em></span>
+        </div>
+
+        <div class="catalog-controls">
+          <label>
+            <span data-i18n="grade">Класс</span>
+            <select id="catalogGrade" aria-label="Класс каталога"></select>
+          </label>
+          <label>
+            <span data-i18n="catalogInstructionLanguage">Язык обучения</span>
+            <select id="catalogLanguage" aria-label="Язык обучения каталога">
+              <option value="ru">Русский</option>
+              <option value="kk">Қазақша</option>
+            </select>
+          </label>
+          <label id="catalogPathwayField" hidden>
+            <span data-i18n="catalogPathway">Направление</span>
+            <select id="catalogPathway" aria-label="Направление обучения">
+              <option value="all" data-i18n="catalogAllPathways">Все направления</option>
+              <option value="emn">ЕМН</option>
+              <option value="ogn">ОГН</option>
+              <option value="general" data-i18n="catalogGeneral">Общее</option>
+            </select>
+          </label>
+          <label>
+            <span data-i18n="catalogSubject">Предмет</span>
+            <select id="catalogSubject" aria-label="Предмет каталога"></select>
+          </label>
+        </div>
+
+        <div class="selected-textbook" id="selectedTextbook" hidden></div>
+        <div class="subject-action-panel" id="subjectActionPanel" hidden>
+          <button type="button" data-subject-action="book">Мой учебник</button>
+          <button type="button" data-subject-action="workbook">Моя рабочая тетрадь</button>
+          <button type="button" data-subject-action="homework">Помоги с домашним заданием</button>
+          <button type="button" data-subject-action="explain">Объясни тему</button>
+          <button type="button" data-subject-action="together">Решим вместе</button>
+          <button type="button" data-subject-action="control">Подготовь к контрольной</button>
+          <button type="button" data-subject-action="quiz">Проверь мои знания</button>
+          <button type="button" data-subject-action="photo">Сфотографировать задание</button>
+        </div>
+        <form class="textbook-page-helper" id="textbookPageForm" hidden>
+          <label>
+            <span>Страница, тема, параграф или упражнение</span>
+            <input id="textbookPageInput" type="text" placeholder="Например: страница 48, упражнение 6" />
+          </label>
+          <button type="submit">Объясни эту страницу</button>
+        </form>
+        <section class="homework-tracker" id="homeworkTracker" hidden aria-labelledby="homeworkTrackerTitle">
+          <div class="related-heading">
+            <h3 id="homeworkTrackerTitle">Домашнее задание</h3>
+            <span id="homeworkRemaining">0</span>
+          </div>
+          <form id="homeworkForm" class="homework-form">
+            <input id="homeworkInput" type="text" placeholder="Например: математика, № 125" />
+            <button type="submit">Добавить</button>
+          </form>
+          <div id="homeworkList" class="homework-list"></div>
+          <button type="button" class="homework-photo-btn" id="homeworkPhotoBtn">Сфотографировать домашнее задание</button>
+        </section>
+        <p class="catalog-result-note" id="catalogResultNote"></p>
+        <div class="textbook-card-list" id="textbookCardList"></div>
+
+        <section class="my-textbooks" aria-labelledby="myTextbooksTitle">
+          <div class="related-heading">
+            <h3 id="myTextbooksTitle">Мои учебники</h3>
+            <span id="myTextbooksCount">0</span>
+          </div>
+          <div class="my-textbook-list" id="myTextbookList"></div>
+          <h4>Избранное</h4>
+          <div class="my-textbook-list" id="favoriteTextbookList"></div>
+          <h4>Недавно открывали</h4>
+          <div class="my-textbook-list" id="recentTextbookList"></div>
+        </section>
+
+        <section class="related-materials" aria-labelledby="relatedMaterialsTitle">
+          <div class="related-heading">
+            <h3 id="relatedMaterialsTitle" data-i18n="catalogRelatedTitle">Рабочие тетради и дополнительные материалы</h3>
+            <span id="relatedMaterialsCount">0</span>
+          </div>
+          <div class="related-material-list" id="relatedMaterialList"></div>
+        </section>
+      </section>
+
       <section class="materials-panel" id="textbooks">
         <div class="panel-heading">
           <div>
@@ -407,9 +511,18 @@
             </div>
             <div class="assistant-actions">
               <button class="ghost-btn" id="hintBtn" type="button" data-i18n="hint">Подсказка</button>
+              <button class="ghost-btn" id="notUnderstoodBtn" type="button">Не понял</button>
               <button class="ghost-btn" id="speakBtn" type="button" data-i18n="speakAnswer">🔊 Озвучить ответ</button>
               <button class="ghost-btn" id="voiceBtn" type="button" data-i18n="voiceInput">🎤 Сказать голосом</button>
             </div>
+          </div>
+          <div class="explain-again-options" id="explainAgainOptions" hidden>
+            <button type="button" data-explain-style="проще">Проще</button>
+            <button type="button" data-explain-style="на примере">На примере</button>
+            <button type="button" data-explain-style="для моего возраста">Для моего возраста</button>
+            <button type="button" data-explain-style="пошагово">Пошагово</button>
+            <button type="button" data-explain-style="с рисунком или схемой">С рисунком или схемой</button>
+            <button type="button" data-explain-style="на другом языке">Другой язык</button>
           </div>
 
           <div class="chat" id="chat" aria-live="polite">
@@ -440,6 +553,12 @@
               <small data-i18n="photoSmall">Учебник, тетрадь, задание или контрольная</small>
             </label>
             <p class="photo-status" id="photoStatus" data-i18n="photoStatus">После загрузки Mama AI предложит разобрать условие по шагам.</p>
+            <div class="photo-action-choices" id="photoActionChoices" hidden>
+              <button type="button" data-photo-action="Объясни задание с фотографии">Объяснить</button>
+              <button type="button" data-photo-action="Дай первую подсказку к заданию с фотографии">Дать подсказку</button>
+              <button type="button" data-photo-action="Решай задание с фотографии вместе со мной по шагам">Решить вместе</button>
+              <button type="button" data-photo-action="Проверь мой ответ к заданию с фотографии">Проверить мой ответ</button>
+            </div>
           </section>
 
           <section class="daily-plan">

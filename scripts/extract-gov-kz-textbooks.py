@@ -10,8 +10,10 @@ from datetime import date
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_HTML = PROJECT_ROOT / "knowledge_base" / "gov_kz_textbooks_1_11_source.html"
+SOURCE_HTML_KK = PROJECT_ROOT / "knowledge_base" / "gov_kz_textbooks_1_11_source_kk.html"
 OUTPUT_JSON = PROJECT_ROOT / "knowledge_base" / "gov_kz_textbooks_1_11_official.json"
 OUTPUT_JS = PROJECT_ROOT / "official_textbooks.js"
+TARGET_ACADEMIC_YEAR = "2026-2027"
 
 
 SUBJECT_KEYWORDS = [
@@ -133,21 +135,49 @@ def detect_material_type(title: str, links: list[dict[str, str]] | None = None) 
     return "main_textbook"
 
 
-def parse_records() -> list[dict[str, object]]:
+def detect_pathway(title: str) -> str:
+    lower = title.lower()
+    if "емн" in lower or "естественно-математ" in lower:
+        return "emn"
+    if "огн" in lower or "общественно-гуманитар" in lower:
+        return "ogn"
+    return "general"
+
+
+def detect_access_status(links: list[dict[str, str]]) -> str:
+    urls = " ".join(str(link.get("url") or "") for link in links).lower()
+    if not urls:
+        return "requires_review"
+    if ".pdf" in urls or "free.atamura.kz" in urls:
+        return "free"
+    if "topiq.kz" in urls:
+        return "registration_required"
+    return "view"
+
+
+def detect_part(title: str) -> str:
+    match = re.search(r"(?:част[ьи]|бөлім)\s*([\d,\s]+)", title, flags=re.IGNORECASE)
+    return clean_text(match.group(1)) if match else ""
+
+
+def parse_source(source_html: Path, default_language: str, source_url: str) -> list[dict[str, object]]:
     parser = TableParser()
-    parser.feed(SOURCE_HTML.read_text(encoding="utf-8"))
+    parser.feed(source_html.read_text(encoding="utf-8"))
 
     records: list[dict[str, object]] = []
-    current_language = "ru"
-    current_language_title = "с русским языком обучения"
+    current_language = default_language
+    current_language_title = "оқыту қазақ тілінде" if default_language == "kk" else "с русским языком обучения"
     current_grade: int | None = None
 
     for row in parser.rows:
       texts = [str(cell["text"]) for cell in row]
       if len(row) == 1:
           marker = texts[0].lower()
-          grade_match = re.search(r"(\d{1,2})\s*класс", marker)
+          grade_match = re.search(r"(\d{1,2})\s*[-–—]?\s*(?:класс|сынып)", marker)
           if "казах" in marker and "обуч" in marker:
+              current_language = "kk"
+              current_language_title = texts[0]
+          elif "оқыту қазақ тілінде" in marker:
               current_language = "kk"
               current_language_title = texts[0]
           elif "рус" in marker and "обуч" in marker:
@@ -174,7 +204,7 @@ def parse_records() -> list[dict[str, object]]:
       record_id = f"gov_kz_g{current_grade}_{current_language}_{subject}_{slug(title)}_{len(records)+1}"
 
       records.append({
-          "entityType": "textbook",
+          "entityType": "workbook" if material_type == "workbook" else "textbook",
           "id": record_id,
           "title": title,
           "publisher": publisher,
@@ -188,10 +218,20 @@ def parse_records() -> list[dict[str, object]]:
           "authorsText": authors,
           "edition": year,
           "year": year,
+          "part": detect_part(title),
+          "pathway": detect_pathway(title),
+          "academicYear": TARGET_ACADEMIC_YEAR,
+          "officialSourceUrl": source_url,
+          "electronicUrl": links[0]["url"] if links else "",
+          "workbookUrl": "",
+          "additionalMaterialsUrl": "",
+          "accessStatus": detect_access_status(links),
+          "actualityStatus": "current",
+          "coverUrl": "",
           "downloadableResource": "official_links_available" if links else "awaiting_official_link",
           "resourceStatus": "metadata_and_official_links_only" if links else "metadata_only_awaiting_link",
           "materialType": material_type,
-          "sourceReferences": ["https://www.gov.kz/memleket/entities/edu/documents/details/892700?lang=ru"],
+          "sourceReferences": [source_url],
           "sourceType": "official_gov_kz_textbook_catalog",
           "verificationStatus": "official_verified_metadata",
           "checkedAt": date.today().isoformat(),
@@ -199,6 +239,18 @@ def parse_records() -> list[dict[str, object]]:
           "status": "official_verified_metadata"
       })
 
+    return records
+
+
+def parse_records() -> list[dict[str, object]]:
+    sources = [
+        (SOURCE_HTML, "ru", "https://www.gov.kz/memleket/entities/edu/documents/details/892700?lang=ru"),
+    ]
+    if SOURCE_HTML_KK.exists():
+        sources.append((SOURCE_HTML_KK, "kk", "https://www.gov.kz/memleket/entities/edu/documents/details/892700?lang=kk"))
+    records: list[dict[str, object]] = []
+    for source_html, language, source_url in sources:
+        records.extend(parse_source(source_html, language, source_url))
     return records
 
 
@@ -210,26 +262,42 @@ def main() -> None:
         "originalName": "gov_kz_textbooks_1_11_official.json",
         "sourceType": "official_textbook_catalog",
         "sourceUrl": "https://www.gov.kz/memleket/entities/edu/documents/details/892700?lang=ru",
+        "sourceUrls": [
+            "https://www.gov.kz/memleket/entities/edu/documents/details/892700?lang=ru",
+            "https://www.gov.kz/memleket/entities/edu/documents/details/892700?lang=kk"
+        ],
         "license": "official_metadata_links_only",
-        "academicYear": "2025-2026",
-        "language": "ru",
+        "academicYear": TARGET_ACADEMIC_YEAR,
+        "languages": ["ru", "kk"],
         "records": records,
         "countsByGrade": {str(grade): sum(1 for item in records if item["grade"] == grade) for grade in range(1, 12)}
     }
     OUTPUT_JSON.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     js_records = [
         {
+            "id": item["id"],
             "grade": item["grade"],
             "subject": item["subjectTitle"],
             "subjectKey": item["subject"],
             "title": item["title"],
             "publisher": item["publisher"],
             "year": item["year"],
+            "part": item["part"],
+            "instructionLanguage": item["instructionLanguage"],
+            "pathway": item["pathway"],
+            "academicYear": item["academicYear"],
+            "officialSourceUrl": item["officialSourceUrl"],
+            "electronicUrl": item["electronicUrl"],
+            "workbookUrl": item["workbookUrl"],
+            "additionalMaterialsUrl": item["additionalMaterialsUrl"],
+            "accessStatus": item["accessStatus"],
+            "actualityStatus": item["actualityStatus"],
+            "coverUrl": item["coverUrl"],
             "language": item["language"],
             "authors": item["authors"],
             "materialType": item["materialType"],
             "source": "Официальный перечень gov.kz",
-            "sourceUrl": "https://www.gov.kz/memleket/entities/edu/documents/details/892700?lang=ru",
+            "sourceUrl": item["officialSourceUrl"],
             "links": item["links"],
             "status": item["status"],
             "resourceStatus": item["resourceStatus"],

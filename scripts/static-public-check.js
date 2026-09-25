@@ -24,7 +24,10 @@ const context = { window: {} };
 vm.createContext(context);
 vm.runInContext(fs.readFileSync(path.join(publicDir, "official_textbooks.js"), "utf8"), context);
 const officialCatalog = context.window.OFFICIAL_TEXTBOOK_CATALOG || [];
-if (officialCatalog.length < 250) fail(`Official catalog too small: ${officialCatalog.length}`);
+if (officialCatalog.length < 500) fail(`Official catalog too small: ${officialCatalog.length}`);
+if (!officialCatalog.some((record) => record.instructionLanguage === "ru")) fail("Russian-medium catalog is missing");
+if (!officialCatalog.some((record) => record.instructionLanguage === "kk")) fail("Kazakh-medium catalog is missing");
+if (!html.includes('id="textbookCatalog"')) fail("Public textbook module is missing");
 
 function extractUserCatalog() {
   const script = fs.readFileSync(path.join(publicDir, "script.js"), "utf8");

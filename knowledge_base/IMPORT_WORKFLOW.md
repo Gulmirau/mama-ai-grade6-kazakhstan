@@ -25,6 +25,16 @@ All official educational records must be imported from verified materials and re
 8. AI search uses trusted Knowledge Base records first.
 9. If no verified records exist, AI must say materials are awaiting import and avoid inventing school facts.
 
+## Official textbook catalog workflow
+
+1. Keep the Russian-medium and Kazakh-medium gov.kz HTML snapshots as separate source files.
+2. Run `python scripts/update_textbooks_catalog.py` to compare the live official pages with the reviewed catalog.
+3. Review `reports/textbooks-update-report.md`; do not activate added, removed, or changed records blindly.
+4. After review, run `python scripts/extract-gov-kz-textbooks.py` to generate normalized JSON and the static browser catalog.
+5. Run `npm run textbooks:test` and `npm run textbooks:report`.
+6. Preserve the previous academic-year catalog as archived data. A new year changes data/version fields, not application code.
+7. Store only metadata and lawful official links unless a publisher or rights holder provides permission to import full content.
+
 ## User photo textbook catalog
 
 `grade6_textbooks_from_photos.json` contains metadata extracted from the user's photos of Grade 6 textbooks.

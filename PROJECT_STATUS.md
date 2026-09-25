@@ -1,6 +1,6 @@
 # Mama AI Project Status
 
-Last updated: 2026-09-20
+Last updated: 2026-09-25
 
 ## Summary
 
@@ -54,7 +54,8 @@ Important: apply `supabase/migrations/202608120001_child_guest_and_invites.sql` 
 | Grade selector 1-11 | WORKING | Public browser check + content tests | All grades 1-11 are selectable and saved locally | Official hour-by-hour curriculum still awaits import |
 | Subject filtering | WORKING | Content tests + public UI checks | 3rd grade includes `Познание мира`; 5th grade required subjects exist; 6th grade materials preserved | Subject list still should be reviewed annually against official curriculum updates |
 | Textbook filtering | WORKING | Public checks for 3rd grade `Познание мира` and 6th grade `Информатика` | Materials filter by selected grade and subject; no 5/7 grade leakage in checked scenarios | Some subjects have no verified main resource |
-| Official textbook catalog | PARTIAL | Coverage report regenerated | 288 official metadata/link records are available | Metadata is not full textbook text or RAG knowledge chunks |
+| Official textbook catalog | WORKING | Both official gov.kz language catalogs + module regression test | 599 official metadata/link records across Grades 1–11; Russian- and Kazakh-medium filters; exact edition selection | Metadata is not full textbook text or RAG knowledge chunks |
+| Textbook selection | WORKING | Module regression test | Selection is saved per active child, grade, language, and subject; AI receives the exact selected edition | Cloud persistence requires applying the 20260925 Supabase migration |
 | User materials | PARTIAL | Coverage report regenerated | 24 user-provided records for grades 3, 5, and 6 are preserved | Scans/photos and cover-only records need OCR and human review |
 | Knowledge chunks / RAG | NOT IMPLEMENTED | Schema audit | Architecture exists | No real `knowledge_chunks` textbook-page corpus; AI does not search page chunks yet |
 | AI tutor chat | DEMO | Code audit | Step-by-step tutor fallback works in browser | No secure backend AI/RAG pipeline on GitHub Pages |
@@ -71,8 +72,9 @@ Important: apply `supabase/migrations/202608120001_child_guest_and_invites.sql` 
 
 ## Current Counts
 
-- Official textbook metadata records: 288
+- Official textbook metadata records: 599
 - User-provided material records: 24
+- Official instruction-language catalogs: Russian and Kazakh
 - Grades covered in report: 1-11
 - Public audit: 14 passed, 0 failed, 1 blocked by Supabase email rate limit
 

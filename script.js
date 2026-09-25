@@ -440,6 +440,64 @@ const textbookCatalog = [
   ...userTextbookCatalog
 ];
 
+const textbookSelectionStorageKey = "mamaAiTextbookSelections";
+
+function textbookRecordId(record) {
+  if (record.id) return record.id;
+  return [record.grade, record.instructionLanguage || record.language, record.subjectKey, record.title, record.publisher]
+    .filter(Boolean)
+    .join("|")
+    .toLowerCase()
+    .replace(/[^a-zа-яёәғқңөұүі0-9|]+/gi, "_");
+}
+
+function recordInstructionLanguage(record) {
+  if (record.instructionLanguage === "kk" || record.instructionLanguage === "ru") return record.instructionLanguage;
+  return record.language === "kk" ? "kk" : "ru";
+}
+
+function recordPathway(record) {
+  return record.pathway || "general";
+}
+
+function recordActuality(record) {
+  return record.actualityStatus || (record.verificationStatus === "official_verified_metadata" ? "current" : "review");
+}
+
+function recordAccess(record) {
+  if (record.accessStatus) return record.accessStatus;
+  const url = record.electronicUrl || record.links?.[0]?.url || record.sourceUrl || "";
+  if (!url) return "requires_review";
+  if (/\.pdf(?:$|\?)/i.test(url) || url.includes("free.atamura.kz")) return "free";
+  if (url.includes("topiq.kz")) return "registration_required";
+  return "view";
+}
+
+function recordElectronicUrl(record) {
+  return record.electronicUrl || record.links?.[0]?.url || record.sourceUrl || "";
+}
+
+function isPrimaryTextbook(record) {
+  return inferMaterialType(record) === "main_textbook";
+}
+
+function loadTextbookSelections() {
+  try {
+    return JSON.parse(localStorage.getItem(textbookSelectionStorageKey) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function loadStoredIdList(key) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key) || "[]");
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+
 const curriculumData = Array.from({ length: 11 }, (_, index) => {
   const grade = index + 1;
   const subjects = getSubjectNamesByGrade(grade);
@@ -783,6 +841,13 @@ let currentGrade = Number(localStorage.getItem("mamaAiGrade") || 6);
 let currentSubjectKey = "math";
 let uiLang = localStorage.getItem("mamaAiUiLang") || "ru";
 let currentLang = localStorage.getItem("mamaAiLearningLang") || "ru";
+let textbookSelections = loadTextbookSelections();
+let favoriteTextbookIds = new Set(loadStoredIdList("mamaAiFavoriteTextbooks"));
+let recentTextbookIds = loadStoredIdList("mamaAiRecentTextbooks");
+let catalogGradeValue = Number(localStorage.getItem("mamaAiCatalogGrade") || currentGrade || 6);
+let catalogLanguageValue = localStorage.getItem("mamaAiCatalogLanguage") || (currentLang === "kk" ? "kk" : "ru");
+let catalogPathwayValue = localStorage.getItem("mamaAiCatalogPathway") || "all";
+let catalogSubjectValue = localStorage.getItem("mamaAiCatalogSubject") || currentSubjectKey || "math";
 let points = Number(localStorage.getItem("mamaAiPoints") || 120);
 let streak = 5;
 let level = 3;
@@ -834,6 +899,9 @@ const currentDateText = document.getElementById("currentDateText");
 const currentTimeText = document.getElementById("currentTimeText");
 const speakBtn = document.getElementById("speakBtn");
 const voiceBtn = document.getElementById("voiceBtn");
+const notUnderstoodBtn = document.getElementById("notUnderstoodBtn");
+const explainAgainOptions = document.getElementById("explainAgainOptions");
+const photoActionChoices = document.getElementById("photoActionChoices");
 const voiceStatus = document.getElementById("voiceStatus");
 const praisePop = document.getElementById("praisePop");
 const confettiLayer = document.getElementById("confettiLayer");
@@ -848,6 +916,31 @@ const kbStatusPill = document.getElementById("kbStatusPill");
 const kbResults = document.getElementById("kbResults");
 const kbKeyword = document.getElementById("kbKeyword");
 const kbQuarter = document.getElementById("kbQuarter");
+const catalogGrade = document.getElementById("catalogGrade");
+const catalogLanguage = document.getElementById("catalogLanguage");
+const catalogPathway = document.getElementById("catalogPathway");
+const catalogPathwayField = document.getElementById("catalogPathwayField");
+const catalogSubject = document.getElementById("catalogSubject");
+const catalogSearch = document.getElementById("catalogSearch");
+const catalogStats = document.getElementById("catalogStats");
+const catalogResultNote = document.getElementById("catalogResultNote");
+const textbookCardList = document.getElementById("textbookCardList");
+const selectedTextbook = document.getElementById("selectedTextbook");
+const subjectActionPanel = document.getElementById("subjectActionPanel");
+const textbookPageForm = document.getElementById("textbookPageForm");
+const textbookPageInput = document.getElementById("textbookPageInput");
+const homeworkTracker = document.getElementById("homeworkTracker");
+const homeworkForm = document.getElementById("homeworkForm");
+const homeworkInput = document.getElementById("homeworkInput");
+const homeworkList = document.getElementById("homeworkList");
+const homeworkRemaining = document.getElementById("homeworkRemaining");
+const homeworkPhotoBtn = document.getElementById("homeworkPhotoBtn");
+const myTextbookList = document.getElementById("myTextbookList");
+const myTextbooksCount = document.getElementById("myTextbooksCount");
+const favoriteTextbookList = document.getElementById("favoriteTextbookList");
+const recentTextbookList = document.getElementById("recentTextbookList");
+const relatedMaterialList = document.getElementById("relatedMaterialList");
+const relatedMaterialsCount = document.getElementById("relatedMaterialsCount");
 const cloudStatusPill = document.getElementById("cloudStatusPill");
 const studentCabinetText = document.getElementById("studentCabinetText");
 const parentCabinetText = document.getElementById("parentCabinetText");
@@ -2048,8 +2141,13 @@ function bindEvents() {
   learningLanguageSelect.addEventListener("change", () => {
     currentLang = learningLanguageSelect.value;
     localStorage.setItem("mamaAiLearningLang", currentLang);
+    if (currentLang === "ru" || currentLang === "kk") {
+      catalogLanguageValue = currentLang;
+      localStorage.setItem("mamaAiCatalogLanguage", catalogLanguageValue);
+    }
     if (appAccessMode === "guest") saveGuestState();
     applyTranslations();
+    renderTextbookCatalog();
     addMessage("bot success", getLanguageMessage());
   });
 
@@ -2126,6 +2224,102 @@ function bindEvents() {
       renderGuestWizard();
     });
   }
+  if (catalogGrade) {
+    catalogGrade.addEventListener("change", () => {
+      catalogGradeValue = Number(catalogGrade.value);
+      localStorage.setItem("mamaAiCatalogGrade", String(catalogGradeValue));
+      renderTextbookCatalog();
+    });
+  }
+  if (catalogLanguage) {
+    catalogLanguage.addEventListener("change", () => {
+      catalogLanguageValue = catalogLanguage.value;
+      localStorage.setItem("mamaAiCatalogLanguage", catalogLanguageValue);
+      renderTextbookCatalog();
+    });
+  }
+  if (catalogPathway) {
+    catalogPathway.addEventListener("change", () => {
+      catalogPathwayValue = catalogPathway.value;
+      localStorage.setItem("mamaAiCatalogPathway", catalogPathwayValue);
+      renderTextbookCatalog();
+    });
+  }
+  if (catalogSubject) {
+    catalogSubject.addEventListener("change", () => {
+      catalogSubjectValue = catalogSubject.value;
+      localStorage.setItem("mamaAiCatalogSubject", catalogSubjectValue);
+      renderTextbookCatalog();
+    });
+  }
+  if (textbookCardList) {
+    textbookCardList.addEventListener("click", (event) => {
+      const card = event.target.closest("[data-textbook-id]");
+      if (!card) return;
+      const record = textbookCatalog.find((item) => textbookRecordId(item) === card.dataset.textbookId);
+      if (!record) return;
+      if (event.target.closest(".select-textbook-btn")) saveSelectedTextbook(record);
+      if (event.target.closest(".ask-textbook-btn")) askAboutTextbook(record);
+      if (event.target.closest(".favorite-textbook-btn")) toggleFavoriteTextbook(record);
+    });
+  }
+  if (catalogSearch) catalogSearch.addEventListener("input", renderTextbookCatalog);
+  for (const list of [myTextbookList, favoriteTextbookList, recentTextbookList]) {
+    list?.addEventListener("click", (event) => {
+      const item = event.target.closest("[data-textbook-id]");
+      if (!item || !event.target.closest(".open-saved-textbook")) return;
+      const record = textbookCatalog.find((candidate) => textbookRecordId(candidate) === item.dataset.textbookId);
+      if (record) openSavedTextbook(record);
+    });
+  }
+  subjectActionPanel?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-subject-action]");
+    if (button) handleSubjectAction(button.dataset.subjectAction);
+  });
+  textbookPageForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const context = textbookPageInput.value.trim();
+    if (!context) return;
+    const book = selectedTextbookRecord();
+    userInput.value = `Объясни ${context} из учебника «${book?.title || "выбранный учебник"}». Сначала объясни условие и дай только первую подсказку.`;
+    document.getElementById("assistant")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    userInput.focus();
+  });
+  homeworkForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const title = homeworkInput.value.trim();
+    if (!title) return;
+    const tasks = loadHomeworkTasks();
+    tasks.push({ id: `hw-${Date.now()}`, title, done: false });
+    saveHomeworkTasks(tasks);
+    homeworkInput.value = "";
+    renderHomeworkTracker();
+  });
+  homeworkList?.addEventListener("change", (event) => {
+    const checkbox = event.target.closest("[data-homework-id]");
+    if (!checkbox) return;
+    const tasks = loadHomeworkTasks().map((task) => task.id === checkbox.dataset.homeworkId ? { ...task, done: checkbox.checked } : task);
+    saveHomeworkTasks(tasks);
+    renderHomeworkTracker();
+  });
+  homeworkPhotoBtn?.addEventListener("click", () => document.getElementById("photoInput")?.click());
+  notUnderstoodBtn?.addEventListener("click", () => {
+    explainAgainOptions.hidden = !explainAgainOptions.hidden;
+  });
+  explainAgainOptions?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-explain-style]");
+    if (!button) return;
+    userInput.value = `Я не понял(а). Объясни ${button.dataset.explainStyle}, не выдавая сразу готовый ответ.`;
+    explainAgainOptions.hidden = true;
+    sendMessage();
+  });
+  photoActionChoices?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-photo-action]");
+    if (!button) return;
+    userInput.value = button.dataset.photoAction;
+    document.getElementById("assistant")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    userInput.focus();
+  });
   if (guestBackBtn) {
     guestBackBtn.addEventListener("click", () => {
       guestWizardStep = Math.max(1, guestWizardStep - 1);
@@ -2208,7 +2402,9 @@ function bindEvents() {
 
   gradeSelect.addEventListener("change", () => {
     currentGrade = Number(gradeSelect.value);
+    catalogGradeValue = currentGrade;
     localStorage.setItem("mamaAiGrade", currentGrade);
+    localStorage.setItem("mamaAiCatalogGrade", String(catalogGradeValue));
     if (appAccessMode === "guest") saveGuestState();
     currentSubjectKey = getSubjectsForGrade()[0].key;
     recordEvent("Смена класса", `${currentGrade} класс`);
@@ -2287,6 +2483,7 @@ function bindEvents() {
   document.getElementById("photoInput").addEventListener("change", (event) => {
     const file = event.target.files[0];
     if (!file) return;
+    if (photoActionChoices) photoActionChoices.hidden = false;
     document.getElementById("photoStatus").textContent = `Фото "${file.name}" добавлено. В демо-версии включен сценарий разбора, OCR/AI подключается на следующем этапе.`;
     handlePhotoUpload(file);
     recordEvent("Фото задания", file.name);
@@ -2337,6 +2534,7 @@ function renderAll() {
     ? `Grade ${currentGrade} of 1–11, Kazakhstan`
     : `${currentGrade} ${t("gradeClass")} из 1–11, Казахстан`;
   renderSubjects();
+  renderTextbookCatalog();
   renderMaterials();
   renderKnowledgeBaseStatus();
   renderPlan();
@@ -2496,6 +2694,437 @@ function renderMaterials() {
       `<strong>${t("miniTest")}:</strong> ${quizBank[subject.key]?.question || quizBank.default.question}`
     ];
   document.getElementById("assessmentList").innerHTML = assessmentItems.map((item) => `<li>${item}</li>`).join("");
+}
+
+function catalogText(key) {
+  const strings = {
+    ru: {
+      found: "Найдено учебников",
+      classes: "классов",
+      subjects: "предметов",
+      textbooks: "учебников",
+      workbooks: "тетрадей и дополнений",
+      missingLinks: "без прямой ссылки",
+      select: "Это мой учебник",
+      selected: "Выбранный учебник",
+      open: "Открыть учебник",
+      ask: "Спросить Mama AI",
+      noBooks: "Для этого сочетания пока нет подтверждённого учебника.",
+      noRelated: "Связанные рабочие тетради пока не подтверждены. Материал можно добавить после проверки официального источника.",
+      current: "Актуален на 2026–2027 учебный год",
+      review: "требует проверки",
+      archived: "архивный",
+      free: "бесплатно",
+      view: "просмотр",
+      registration_required: "требуется регистрация",
+      paid: "платно",
+      requires_review: "доступ уточняется",
+      source: "Официальный источник",
+      chosenNote: "Mama AI будет учитывать эту книгу и не станет угадывать другой вариант."
+    },
+    kk: {
+      found: "Табылған оқулық",
+      classes: "сынып",
+      subjects: "пән",
+      textbooks: "оқулық",
+      workbooks: "дәптер және қосымша",
+      missingLinks: "тікелей сілтемесіз",
+      select: "Осы оқулықты таңдау",
+      selected: "Таңдалған оқулық",
+      open: "Оқулықты ашу",
+      ask: "Mama AI-дан сұрау",
+      noBooks: "Бұл таңдау бойынша расталған оқулық әзірге жоқ.",
+      noRelated: "Байланысты жұмыс дәптерлері әзірге расталмаған.",
+      current: "2026–2027 оқу жылына өзекті",
+      review: "тексеруді қажет етеді",
+      archived: "мұрағат",
+      free: "тегін",
+      view: "қарау",
+      registration_required: "тіркелу қажет",
+      paid: "ақылы",
+      requires_review: "қолжетімділігі нақтыланады",
+      source: "Ресми дереккөз",
+      chosenNote: "Mama AI осы оқулықты ескереді және басқа нұсқаны өзі таңдамады."
+    },
+    en: {
+      found: "Textbooks found",
+      classes: "grades",
+      subjects: "subjects",
+      textbooks: "textbooks",
+      workbooks: "workbooks and extras",
+      missingLinks: "without a direct link",
+      select: "Use this textbook",
+      selected: "Selected textbook",
+      open: "Open textbook",
+      ask: "Ask Mama AI",
+      noBooks: "No verified textbook is available for this selection yet.",
+      noRelated: "Related workbooks have not been verified yet.",
+      current: "Current for the 2026–2027 school year",
+      review: "needs review",
+      archived: "archived",
+      free: "free",
+      view: "view",
+      registration_required: "registration required",
+      paid: "paid",
+      requires_review: "access needs review",
+      source: "Official source",
+      chosenNote: "Mama AI will use this book and will not guess another edition."
+    }
+  };
+  return strings[uiLang]?.[key] || strings.ru[key] || key;
+}
+
+function escapeCatalogHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function safeCatalogUrl(value) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" ? parsed.href : "";
+  } catch {
+    return "";
+  }
+}
+
+function textbookSelectionScope() {
+  return childSession?.child_id || cloudProfile?.id || (studentName?.value.trim().toLowerCase() || "local-child");
+}
+
+function textbookSelectionKey(grade = catalogGradeValue, language = catalogLanguageValue, subject = catalogSubjectValue) {
+  return `${textbookSelectionScope()}:${grade}:${language}:${subject}`;
+}
+
+function selectedTextbookRecord() {
+  const id = textbookSelections[textbookSelectionKey()];
+  return textbookCatalog.find((record) => textbookRecordId(record) === id) || null;
+}
+
+function activeTextbookContext() {
+  const record = selectedTextbookRecord();
+  if (!record) return null;
+  return {
+    id: textbookRecordId(record),
+    grade: record.grade,
+    subjectKey: record.subjectKey,
+    title: record.title,
+    authors: record.authors || [],
+    publisher: record.publisher || "",
+    year: record.year || "",
+    part: record.part || "",
+    instructionLanguage: recordInstructionLanguage(record),
+    pathway: recordPathway(record),
+    actualityStatus: recordActuality(record),
+    sourceUrl: record.officialSourceUrl || record.sourceUrl || ""
+  };
+}
+
+function catalogBaseRecords() {
+  return textbookCatalog.filter((record) => {
+    if (Number(record.grade) !== Number(catalogGradeValue)) return false;
+    if (recordInstructionLanguage(record) !== catalogLanguageValue) return false;
+    if (catalogGradeValue >= 10 && catalogPathwayValue !== "all") {
+      return recordPathway(record) === catalogPathwayValue || recordPathway(record) === "general";
+    }
+    return true;
+  });
+}
+
+function catalogSearchRecords() {
+  const query = (catalogSearch?.value || "").trim().toLowerCase();
+  if (!query) return null;
+  const tokens = query.split(/\s+/).filter((token) => token && !["класс", "сынып", "grade"].includes(token));
+  return textbookCatalog.filter((record) => {
+    const searchable = [
+      `${record.grade} класс`,
+      record.subject,
+      record.subjectKey,
+      record.title,
+      record.publisher,
+      record.year,
+      ...(record.authors || [])
+    ].join(" ").toLowerCase();
+    return tokens.every((token) => searchable.includes(token));
+  });
+}
+
+function populateCatalogControls() {
+  if (!catalogGrade || !catalogLanguage || !catalogSubject) return;
+  if (!catalogGrade.options.length) {
+    catalogGrade.innerHTML = Array.from({ length: 11 }, (_, index) => `<option value="${index + 1}">${index + 1} ${t("gradeClass")}</option>`).join("");
+  }
+  catalogGrade.value = String(catalogGradeValue);
+  catalogLanguage.value = catalogLanguageValue;
+  catalogPathwayField.hidden = catalogGradeValue < 10;
+  catalogPathway.value = catalogPathwayValue;
+
+  const subjects = [...new Map(catalogBaseRecords().map((record) => [record.subjectKey, record.subject])).entries()]
+    .sort((a, b) => String(a[1]).localeCompare(String(b[1]), uiLang === "kk" ? "kk" : "ru"));
+  if (!subjects.some(([key]) => key === catalogSubjectValue)) {
+    catalogSubjectValue = subjects[0]?.[0] || "";
+  }
+  catalogSubject.innerHTML = subjects.map(([key, title]) => `<option value="${escapeCatalogHtml(key)}">${escapeCatalogHtml(subjectLabel(title))}</option>`).join("");
+  catalogSubject.value = catalogSubjectValue;
+}
+
+function renderCatalogStats() {
+  if (!catalogStats) return;
+  const primary = textbookCatalog.filter(isPrimaryTextbook);
+  const additional = textbookCatalog.filter((record) => !isPrimaryTextbook(record));
+  const stats = [
+    [new Set(primary.map((record) => record.grade)).size, catalogText("classes")],
+    [new Set(primary.map((record) => record.subjectKey)).size, catalogText("subjects")],
+    [primary.length, catalogText("textbooks")],
+    [additional.length, catalogText("workbooks")],
+    [textbookCatalog.filter((record) => !recordElectronicUrl(record)).length, catalogText("missingLinks")]
+  ];
+  catalogStats.innerHTML = stats.map(([value, label]) => `<div><strong>${value}</strong><span>${label}</span></div>`).join("");
+}
+
+function textbookCard(record) {
+  const id = textbookRecordId(record);
+  const selected = selectedTextbookRecord();
+  const isSelected = selected && textbookRecordId(selected) === id;
+  const actuality = recordActuality(record);
+  const access = recordAccess(record);
+  const url = safeCatalogUrl(recordElectronicUrl(record));
+  const authors = record.authors?.length ? record.authors.join(", ") : (uiLang === "kk" ? "Авторлары нақтыланады" : "Авторы уточняются");
+  const publisher = record.publisher && record.publisher !== "awaiting_review" ? record.publisher : (uiLang === "kk" ? "Баспасы нақтыланады" : "Издательство уточняется");
+  const year = record.year && record.year !== "awaiting_review" ? record.year : "—";
+  const pathway = recordPathway(record) !== "general" ? recordPathway(record).toUpperCase() : "";
+  const sourceUrl = safeCatalogUrl(record.officialSourceUrl || record.sourceUrl || "");
+  const coverUrl = safeCatalogUrl(record.coverUrl || "");
+  const isFavorite = favoriteTextbookIds.has(id);
+  return `
+    <article class="textbook-catalog-card ${isSelected ? "selected" : ""}" data-textbook-id="${escapeCatalogHtml(id)}">
+      ${coverUrl ? `<img class="book-cover-placeholder" src="${escapeCatalogHtml(coverUrl)}" alt="Обложка: ${escapeCatalogHtml(record.title)}" />` : `<div class="book-cover-placeholder" aria-hidden="true">${escapeCatalogHtml(record.subject || record.subjectTitle || "Учебник")}</div>`}
+      <div class="textbook-card-body">
+        <div class="catalog-badges">
+          <span class="catalog-badge ${actuality === "current" ? "current" : "review"}">${escapeCatalogHtml(catalogText(actuality))}</span>
+          <span class="catalog-badge">${escapeCatalogHtml(catalogText(access))}</span>
+          ${pathway ? `<span class="catalog-badge">${pathway}</span>` : ""}
+        </div>
+        <h3>${escapeCatalogHtml(record.title)}</h3>
+        <details class="book-details">
+          <summary>О книге</summary>
+          <p>${escapeCatalogHtml(authors)}</p>
+          <p>${escapeCatalogHtml(publisher)} · ${escapeCatalogHtml(year)} · ${escapeCatalogHtml(record.academicYear || "2026-2027")}</p>
+          ${sourceUrl ? `<p><a href="${escapeCatalogHtml(sourceUrl)}" target="_blank" rel="noopener">${escapeCatalogHtml(catalogText("source"))}</a></p>` : ""}
+        </details>
+        <div class="catalog-card-actions">
+          ${url ? `<a href="${escapeCatalogHtml(url)}" target="_blank" rel="noopener">${escapeCatalogHtml(catalogText("open"))}</a>` : ""}
+          <button class="select-textbook-btn" type="button">${escapeCatalogHtml(isSelected ? catalogText("selected") : catalogText("select"))}</button>
+          <button class="ask-textbook-btn" type="button">${escapeCatalogHtml(catalogText("ask"))}</button>
+          <button class="favorite-textbook-btn" type="button">${isFavorite ? "В избранном" : "В избранное"}</button>
+        </div>
+      </div>
+    </article>`;
+}
+
+function renderSelectedTextbook() {
+  if (!selectedTextbook) return;
+  const record = selectedTextbookRecord();
+  selectedTextbook.hidden = !record;
+  if (!record) {
+    selectedTextbook.innerHTML = "";
+    return;
+  }
+  selectedTextbook.innerHTML = `<strong>${escapeCatalogHtml(catalogText("selected"))}: ${escapeCatalogHtml(record.title)}</strong><span>${escapeCatalogHtml(record.publisher || "")} · ${escapeCatalogHtml(record.year || "")}</span><small>${escapeCatalogHtml(catalogText("chosenNote"))}</small>`;
+}
+
+function renderRelatedMaterials(records = null) {
+  if (!relatedMaterialList || !relatedMaterialsCount) return;
+  const related = (records || catalogBaseRecords()).filter((record) => (records ? true : record.subjectKey === catalogSubjectValue) && !isPrimaryTextbook(record));
+  relatedMaterialsCount.textContent = String(related.length);
+  if (!related.length) {
+    relatedMaterialList.innerHTML = `<p class="catalog-result-note">${escapeCatalogHtml(catalogText("noRelated"))}</p>`;
+    return;
+  }
+  relatedMaterialList.innerHTML = related.map((record) => {
+    const url = safeCatalogUrl(recordElectronicUrl(record));
+    return `<article class="related-material-item"><div><strong>${escapeCatalogHtml(record.title)}</strong><small>${escapeCatalogHtml(materialTypeLabel(inferMaterialType(record)))} · ${escapeCatalogHtml(record.publisher || "")}</small></div>${url ? `<a href="${escapeCatalogHtml(url)}" target="_blank" rel="noopener">${escapeCatalogHtml(catalogText("source"))}</a>` : ""}</article>`;
+  }).join("");
+}
+
+function personalTextbookItem(record) {
+  const id = textbookRecordId(record);
+  return `<article class="my-textbook-item" data-textbook-id="${escapeCatalogHtml(id)}"><div><strong>${escapeCatalogHtml(record.subject || record.subjectTitle || "Предмет")}</strong><small>${escapeCatalogHtml(record.title)}</small></div><button type="button" class="open-saved-textbook">Открыть</button></article>`;
+}
+
+function renderPersonalTextbooks() {
+  if (!myTextbookList || !myTextbooksCount) return;
+  const scopePrefix = `${textbookSelectionScope()}:`;
+  const selectedIds = [...new Set(Object.entries(textbookSelections)
+    .filter(([key]) => key.startsWith(scopePrefix))
+    .map(([, id]) => id))];
+  const selectedRecords = selectedIds.map((id) => textbookCatalog.find((record) => textbookRecordId(record) === id)).filter(Boolean);
+  const favorites = [...favoriteTextbookIds].map((id) => textbookCatalog.find((record) => textbookRecordId(record) === id)).filter(Boolean);
+  const recent = recentTextbookIds.map((id) => textbookCatalog.find((record) => textbookRecordId(record) === id)).filter(Boolean).slice(0, 6);
+  myTextbooksCount.textContent = String(selectedRecords.length);
+  myTextbookList.innerHTML = selectedRecords.length ? selectedRecords.map(personalTextbookItem).join("") : `<p class="catalog-result-note">Сначала нажмите «Это мой учебник».</p>`;
+  favoriteTextbookList.innerHTML = favorites.length ? favorites.map(personalTextbookItem).join("") : `<p class="catalog-result-note">Здесь появятся отмеченные книги.</p>`;
+  recentTextbookList.innerHTML = recent.length ? recent.map(personalTextbookItem).join("") : `<p class="catalog-result-note">История пока пуста.</p>`;
+}
+
+function renderTextbookCatalog() {
+  if (!textbookCardList) return;
+  populateCatalogControls();
+  renderCatalogStats();
+  const searchRecords = catalogSearchRecords();
+  const sourceRecords = searchRecords || catalogBaseRecords().filter((record) => record.subjectKey === catalogSubjectValue);
+  const records = sourceRecords.filter(isPrimaryTextbook);
+  catalogResultNote.textContent = records.length
+    ? `${catalogText("found")}: ${records.length}${records.length > 1 ? ". Выберите учебник, который использует ваша школа." : ""}`
+    : catalogText("noBooks");
+  textbookCardList.innerHTML = records.map(textbookCard).join("");
+  renderSelectedTextbook();
+  if (subjectActionPanel) subjectActionPanel.hidden = !selectedTextbookRecord();
+  if (textbookPageForm) textbookPageForm.hidden = !selectedTextbookRecord();
+  renderRelatedMaterials(searchRecords || null);
+  renderPersonalTextbooks();
+  renderHomeworkTracker();
+}
+
+function homeworkStorageKey() {
+  return `mamaAiHomework:${textbookSelectionScope()}`;
+}
+
+function loadHomeworkTasks() {
+  return loadStoredIdList(homeworkStorageKey());
+}
+
+function saveHomeworkTasks(tasks) {
+  localStorage.setItem(homeworkStorageKey(), JSON.stringify(tasks));
+}
+
+function renderHomeworkTracker() {
+  if (!homeworkList || !homeworkRemaining) return;
+  const tasks = loadHomeworkTasks();
+  const remaining = tasks.filter((task) => !task.done).length;
+  homeworkRemaining.textContent = `${remaining} осталось`;
+  homeworkList.innerHTML = tasks.length
+    ? tasks.map((task) => `<label class="homework-item ${task.done ? "done" : ""}"><input type="checkbox" data-homework-id="${escapeCatalogHtml(task.id)}" ${task.done ? "checked" : ""} /><span>${escapeCatalogHtml(task.title)}</span></label>`).join("")
+    : `<p class="catalog-result-note">Добавьте задания или сфотографируйте страницу.</p>`;
+}
+
+async function saveSelectedTextbook(record) {
+  catalogGradeValue = Number(record.grade || catalogGradeValue);
+  catalogLanguageValue = recordInstructionLanguage(record);
+  catalogSubjectValue = record.subjectKey;
+  catalogPathwayValue = recordPathway(record) || "all";
+  localStorage.setItem("mamaAiCatalogGrade", String(catalogGradeValue));
+  localStorage.setItem("mamaAiCatalogLanguage", catalogLanguageValue);
+  localStorage.setItem("mamaAiCatalogSubject", catalogSubjectValue);
+  localStorage.setItem("mamaAiCatalogPathway", catalogPathwayValue);
+  const id = textbookRecordId(record);
+  textbookSelections[textbookSelectionKey()] = id;
+  recentTextbookIds = [id, ...recentTextbookIds.filter((item) => item !== id)].slice(0, 12);
+  localStorage.setItem(textbookSelectionStorageKey, JSON.stringify(textbookSelections));
+  localStorage.setItem("mamaAiRecentTextbooks", JSON.stringify(recentTextbookIds));
+  localStorage.setItem("mamaAiSelectedTextbook", JSON.stringify({
+    id,
+    grade: record.grade,
+    subjectKey: record.subjectKey,
+    title: record.title,
+    authors: record.authors || [],
+    publisher: record.publisher || "",
+    year: record.year || "",
+    instructionLanguage: recordInstructionLanguage(record),
+    pathway: recordPathway(record),
+    sourceUrl: record.officialSourceUrl || record.sourceUrl || ""
+  }));
+  currentGrade = Number(record.grade || currentGrade);
+  if (getSubjectsForGrade().some((subject) => subject.key === record.subjectKey)) currentSubjectKey = record.subjectKey;
+  localStorage.setItem("mamaAiGrade", String(currentGrade));
+  if (gradeSelect) gradeSelect.value = String(currentGrade);
+  recordEvent("Выбор учебника", `${record.grade} класс: ${record.title}`);
+  renderAll();
+  try {
+    await window.MamaAiSupabase?.saveTextbookSelection?.({
+      profileScope: textbookSelectionScope(),
+      childSessionToken: childSession?.session_token || childSession?.sessionToken || "",
+      textbookId: id,
+      grade: record.grade,
+      instructionLanguage: recordInstructionLanguage(record),
+      subjectKey: record.subjectKey,
+      snapshot: record
+    });
+  } catch {
+    // The local profile remains usable until the optional cloud migration is applied.
+  }
+}
+
+function askAboutTextbook(record) {
+  if (record) saveSelectedTextbook(record);
+  const selected = record || selectedTextbookRecord();
+  const prompt = selected
+    ? `Помоги по учебнику «${selected.title}», ${selected.publisher || "издательство уточняется"}, ${selected.year || "год уточняется"}. Напиши номер упражнения и страницу.`
+    : "Напиши номер упражнения и страницу из выбранного учебника.";
+  userInput.value = prompt;
+  document.getElementById("assistant")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  userInput.focus();
+}
+
+function toggleFavoriteTextbook(record) {
+  const id = textbookRecordId(record);
+  if (favoriteTextbookIds.has(id)) favoriteTextbookIds.delete(id);
+  else favoriteTextbookIds.add(id);
+  localStorage.setItem("mamaAiFavoriteTextbooks", JSON.stringify([...favoriteTextbookIds]));
+  renderTextbookCatalog();
+}
+
+function openSavedTextbook(record) {
+  catalogGradeValue = Number(record.grade);
+  catalogLanguageValue = recordInstructionLanguage(record);
+  catalogSubjectValue = record.subjectKey;
+  catalogPathwayValue = recordPathway(record) || "all";
+  recentTextbookIds = [textbookRecordId(record), ...recentTextbookIds.filter((id) => id !== textbookRecordId(record))].slice(0, 12);
+  localStorage.setItem("mamaAiRecentTextbooks", JSON.stringify(recentTextbookIds));
+  if (catalogSearch) catalogSearch.value = "";
+  renderTextbookCatalog();
+  document.getElementById("textbookCatalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function handleSubjectAction(action) {
+  const book = selectedTextbookRecord();
+  if (action === "book") {
+    const url = safeCatalogUrl(recordElectronicUrl(book || {}));
+    if (url) window.open(url, "_blank", "noopener");
+    else selectedTextbook?.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+  if (action === "workbook") {
+    document.getElementById("relatedMaterialsTitle")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+  if (action === "homework") {
+    homeworkTracker.hidden = false;
+    renderHomeworkTracker();
+    homeworkTracker.scrollIntoView({ behavior: "smooth", block: "center" });
+    homeworkInput.focus();
+    return;
+  }
+  if (action === "photo") {
+    document.getElementById("photoInput")?.click();
+    return;
+  }
+  if (action === "quiz") {
+    document.getElementById("test")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+  const prompts = {
+    explain: "Объясни текущую тему простыми словами и задай короткий вопрос для проверки понимания.",
+    together: "Давай решим задание вместе. Сначала спроси, что я уже понял(а), и давай только одну подсказку за шаг.",
+    control: "Подготовь меня к контрольной по текущей теме: короткое повторение, затем 3 вопроса от простого к сложному."
+  };
+  userInput.value = prompts[action] || "Помоги мне по выбранному учебнику.";
+  document.getElementById("assistant")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  userInput.focus();
 }
 
 function makeSubjectIntro(subject) {
@@ -2805,6 +3434,7 @@ async function sendMessage() {
         difficulty: detectDifficulty(text.toLowerCase()),
         mode: modeSelect.value,
         language: currentLang,
+        selectedTextbook: activeTextbookContext(),
         question: text
       }
     });
@@ -2904,6 +3534,7 @@ async function handlePhotoUpload(file) {
         difficulty: "средний",
         mode: modeSelect.value,
         language: currentLang,
+        selectedTextbook: activeTextbookContext(),
         fileName: file.name,
         imageData
       }
@@ -2948,9 +3579,22 @@ function makePhotoImportStatus(result) {
 }
 
 function makeTutorResponse({ subject, topic, difficulty, originalQuestion, ageTone, language = "ru", mode }) {
+  const selectedBook = activeTextbookContext();
+  const textbookLine = selectedBook
+    ? language === "kk"
+      ? `Таңдалған оқулық: «${selectedBook.title}», ${selectedBook.publisher || "баспасы нақтыланады"}, ${selectedBook.year || "жылы нақтыланады"}.`
+      : language === "en"
+        ? `Selected textbook: “${selectedBook.title}”, ${selectedBook.publisher || "publisher pending"}, ${selectedBook.year || "year pending"}.`
+        : `Выбранный учебник: «${selectedBook.title}», ${selectedBook.publisher || "издательство уточняется"}, ${selectedBook.year || "год уточняется"}.`
+    : language === "kk"
+      ? "Нақты оқулық таңдалмаған. Бірнеше нұсқа болса, оқулықты өзім болжамаймын."
+      : language === "en"
+        ? "No specific textbook is selected. I will not guess when several editions are available."
+        : "Конкретный учебник не выбран. Если разрешено несколько вариантов, я не буду угадывать учебник.";
   if (language === "kk") {
     return [
       `Диагностика: ${currentGrade}-сынып, пән: ${subject.title}, тақырып: ${topic}, деңгей: ${difficulty}.`,
+      textbookLine,
       "Шартты қысқаша түсіндіру: тапсырманы бірден көшірмейміз, алдымен не сұралып тұрғанын анықтаймыз.",
       "Сұрақ: сен нені түсіндің, ал қай жерде қиындық болды?",
       "Кеңес: белгілі ақпаратты және табу керек нәрсені бөлек жаз.",
@@ -2965,6 +3609,7 @@ function makeTutorResponse({ subject, topic, difficulty, originalQuestion, ageTo
   if (language === "en") {
     return [
       `Diagnosis: grade ${currentGrade}, subject: ${subject.title}, topic: ${topic}, level: ${difficulty}.`,
+      textbookLine,
       "Short explanation: we will not jump to the final answer. First we understand what the task asks.",
       "Question: what part is already clear, and where did it become difficult?",
       "Hint: write what is known and what we need to find.",
@@ -2985,6 +3630,7 @@ function makeTutorResponse({ subject, topic, difficulty, originalQuestion, ageTo
 
   return [
     `Диагностика: ${currentGrade} класс, предмет: ${subject.title}, тема: ${topic}, формат: ${modeLine}, сложность: ${difficulty}.`,
+    textbookLine,
     `Короткое объяснение условия: я вижу задание "${originalQuestion}". Сейчас не будем сразу писать готовый ответ. Сначала поймем, что дано, что нужно найти или объяснить, и какое правило здесь подходит. ${ageTone}`,
     "Вопрос к тебе: что в условии уже понятно? Где остановился: в словах задания, в выборе правила или в вычислениях?",
     `Подсказка: выпиши отдельно "дано" и "нужно найти". Потом найди ключевую тему: ${topic}. Если ошибешься, ничего страшного: ошибка просто показывает место, которое надо спокойно разобрать.`,

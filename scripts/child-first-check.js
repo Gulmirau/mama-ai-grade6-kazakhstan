@@ -15,7 +15,7 @@ const style = read("style.css");
 const supabaseClient = read("supabase-client.js");
 const migration = read("supabase/migrations/202608120001_child_guest_and_invites.sql");
 
-check("landing screen exists", index.includes('id="landing"') && index.includes("Учиться без регистрации") && index.includes("Родителям"));
+check("landing screen exists", index.includes('id="landing"') && (index.includes("Учиться без регистрации") || index.includes("Я ученик — начать учиться")) && index.includes("Родител"));
 check("child can start without auth", index.includes("quickChildName") && script.includes("Можно учиться без регистрации"));
 check("guest wizard exists", index.includes('id="guestWizard"') && index.includes("В каком ты классе?") && script.includes("renderGuestWizard"));
 check("guest wizard has four simple actions", index.includes("actionPhotoBtn") && index.includes("actionQuestionBtn") && index.includes("actionTopicBtn") && index.includes("actionAssessmentBtn"));

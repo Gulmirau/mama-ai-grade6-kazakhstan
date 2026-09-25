@@ -1,0 +1,125 @@
+{
+  "generatedAt": "2026-09-25T05:24:00.106Z",
+  "targetAcademicYear": "2026-2027",
+  "sources": [
+    "https://www.gov.kz/memleket/entities/edu/documents/details/892700?lang=ru",
+    "https://www.gov.kz/memleket/entities/edu/documents/details/892700?lang=kk"
+  ],
+  "officialSourceCheckedAt": "2026-09-25",
+  "classes": 11,
+  "subjects": 30,
+  "textbooks": 611,
+  "workbooksAndAdditionalMaterials": 12,
+  "recordsWithoutDirectElectronicLink": 28,
+  "recordsRequiringManualReview": 24,
+  "officialRecords": 599,
+  "userProvidedRecords": 24,
+  "focusGrades": {
+    "grade3": {
+      "grade": 3,
+      "records": 38,
+      "ru": 22,
+      "kk": 16,
+      "subjects": 11,
+      "needsReview": 8
+    },
+    "grade7": {
+      "grade": 7,
+      "records": 63,
+      "ru": 31,
+      "kk": 32,
+      "subjects": 15,
+      "needsReview": 0
+    }
+  },
+  "byGrade": [
+    {
+      "grade": 1,
+      "records": 13,
+      "ru": 7,
+      "kk": 6,
+      "subjects": 6,
+      "needsReview": 0
+    },
+    {
+      "grade": 2,
+      "records": 35,
+      "ru": 19,
+      "kk": 16,
+      "subjects": 7,
+      "needsReview": 0
+    },
+    {
+      "grade": 3,
+      "records": 38,
+      "ru": 22,
+      "kk": 16,
+      "subjects": 11,
+      "needsReview": 8
+    },
+    {
+      "grade": 4,
+      "records": 28,
+      "ru": 13,
+      "kk": 15,
+      "subjects": 9,
+      "needsReview": 0
+    },
+    {
+      "grade": 5,
+      "records": 51,
+      "ru": 29,
+      "kk": 22,
+      "subjects": 13,
+      "needsReview": 8
+    },
+    {
+      "grade": 6,
+      "records": 55,
+      "ru": 29,
+      "kk": 26,
+      "subjects": 13,
+      "needsReview": 8
+    },
+    {
+      "grade": 7,
+      "records": 63,
+      "ru": 31,
+      "kk": 32,
+      "subjects": 15,
+      "needsReview": 0
+    },
+    {
+      "grade": 8,
+      "records": 67,
+      "ru": 31,
+      "kk": 36,
+      "subjects": 15,
+      "needsReview": 0
+    },
+    {
+      "grade": 9,
+      "records": 77,
+      "ru": 36,
+      "kk": 41,
+      "subjects": 16,
+      "needsReview": 0
+    },
+    {
+      "grade": 10,
+      "records": 94,
+      "ru": 44,
+      "kk": 50,
+      "subjects": 19,
+      "needsReview": 0
+    },
+    {
+      "grade": 11,
+      "records": 102,
+      "ru": 51,
+      "kk": 51,
+      "subjects": 19,
+      "needsReview": 0
+    }
+  ]
+}

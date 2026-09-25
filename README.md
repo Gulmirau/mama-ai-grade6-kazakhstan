@@ -33,7 +33,7 @@ Files:
 - `knowledge_base/schema.sql` - normalized database schema for production storage.
 - `knowledge_base/IMPORT_WORKFLOW.md` - import and review workflow.
 - `knowledge_base/import_record_template.json` - JSON import template.
-- `knowledge_base/gov_kz_textbooks_1_11_official.json` - 288 official textbook metadata/link records extracted from gov.kz for grades 1-11.
+- `knowledge_base/gov_kz_textbooks_1_11_official.json` - 599 official textbook metadata/link records extracted from the Russian- and Kazakh-medium gov.kz catalogs for grades 1-11.
 - `official_textbooks.js` - static-browser version of the official catalog for GitHub Pages.
 - `knowledge_base/grade6_textbooks_from_photos.json` - catalog records created from the user's Grade 6 textbook photos and checked against publisher/official references where available. These are metadata records only, not full textbook content.
 - `knowledge_base/grade3_5_textbooks_from_scans.json` - catalog records created from the user's Grade 3 and Grade 5 photos/PDF scans. PDF scans currently have no text layer and are marked `uploaded_awaiting_ocr`.
@@ -100,6 +100,8 @@ Real warning emails require an email provider. Until `EMAIL_PROVIDER` and sender
 npm run check
 npm run content:test
 npm run content:report
+npm run textbooks:test
+npm run textbooks:report
 ```
 
 To check whether the official gov.kz textbook page changed:
@@ -107,6 +109,14 @@ To check whether the official gov.kz textbook page changed:
 ```bash
 python scripts/update_textbooks_catalog.py
 ```
+
+## Каталог учебников
+
+Отдельный модуль «Учебники и рабочие тетради» позволяет выбрать класс, язык обучения, предмет и точное издание. Для 10–11 классов предусмотрен фильтр ЕМН/ОГН. Выбор сохраняется отдельно для активного ребёнка, поэтому Mama AI передаёт в запрос название, авторов, издательство, год и часть именно выбранной книги и не угадывает издание.
+
+Каталог включает официальные метаданные и ссылки Министерства просвещения РК для русскоязычного и казахоязычного обучения. Полные тексты книг не копируются. Если издательство требует регистрацию или ссылка отсутствует, интерфейс честно показывает статус доступа. Рабочие тетради по фотографиям пользователя остаются на проверке, пока не найден официальный или лицензированный источник.
+
+Для ежегодного обновления запускается `python scripts/update_textbooks_catalog.py`: скрипт сравнивает оба официальных перечня с сохранённым каталогом и создаёт отчёт, не заменяя проверенные данные автоматически. Облачная схема и сохранение выбора подготовлены миграцией `supabase/migrations/202609250001_textbook_catalog.sql`.
 
 ## Подключение AI API
 

@@ -95,4 +95,7 @@ Curriculum updates must be data-driven. Adding a new textbook, academic year, SO
 - Runtime JSON Knowledge Base is created at `data/knowledge_base.json`.
 - Import workflow is documented in `knowledge_base/IMPORT_WORKFLOW.md`.
 - Backend endpoints are available under `/api/kb/*`.
-- Verified official educational content is not bundled yet and remains awaiting import.
+- The textbook catalog contains 599 verified metadata/link records from the official Russian- and Kazakh-medium gov.kz lists for Grades 1-11. This is a catalog, not full textbook content or RAG chunks.
+- Students can choose the exact edition by grade, instruction language, subject, publisher, authors, year, part, and pathway. The app must never select one of several editions automatically.
+- The selected textbook is scoped to the active child and passed to AI/photo requests. Full page-level content, official SOR/SOCH/UNT banks, and reviewed knowledge chunks still await licensed import.
+- Textbook annual updates are versioned by academic year and checked through `scripts/update_textbooks_catalog.py` before activation.
