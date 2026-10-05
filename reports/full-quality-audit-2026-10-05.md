@@ -6,7 +6,7 @@ Public site: https://gulmirau.github.io/mama-ai-grade6-kazakhstan/
 
 ## Executive Result
 
-Mama AI is a usable educational prototype, but it is not yet a complete verified AI tutor. After the fixes in this audit, the estimated readiness is **55/100** for supervised pilot use and **not ready for unsupervised reliance on complex school answers**.
+Mama AI is a usable educational prototype, but it is not yet a complete verified AI tutor. After the quality and child-reliability fixes, the estimated readiness is **65/100** for supervised pilot use and **not ready for unsupervised reliance on complex school answers**.
 
 The strongest parts are the child-first entry flow, Grades 1-11 navigation, subject filtering, responsive layout, Supabase structure, and official textbook catalog metadata. The weakest parts are the absence of a deployed AI backend, textbook page content, official curriculum lesson chunks, official SOR/SOCH/ENT question banks, real OCR, and end-to-end role testing.
 
@@ -14,18 +14,18 @@ The strongest parts are the child-first entry flow, Grades 1-11 navigation, subj
 
 | Area | Score | Evidence |
 | --- | ---: | --- |
-| Child onboarding and navigation | 90/100 | Guest path works without registration; grade and subject selection verified in browser |
-| Mobile and desktop layout | 90/100 | Passed at 320, 360, 375, 390, 412, 430, 768, and 1280 px |
+| Child onboarding and navigation | 95/100 | Guest path works without registration; grade, subject, and textbook context stay synchronized |
+| Mobile and desktop layout | 95/100 | Passed locally and publicly at 320, 360, 375, 390, 412, 430, 768, and 1280 px |
 | Grade and subject structure | 85/100 | Grades 1-11 and grade-specific subject lists work; annual curriculum review still required |
 | Textbook catalog | 75/100 | 599 official metadata records plus user records; official links available; no textbook page corpus |
-| Basic arithmetic tutoring | 75/100 | Verified deterministic +, -, multiplication, division and simple two-number word problems |
+| Deterministic math tutoring | 90/100 | Verified arithmetic, two-number word problems, fractions, percentages, simple linear equations, division-by-zero handling, and protection from partial multi-operation answers |
 | Complex AI answers | 20/100 | Public GitHub Pages has no secure AI backend; complex answers use a general learning strategy |
 | Knowledge base / RAG | 15/100 | Schema and search architecture exist; verified page-level chunks are not imported |
 | SOR / SOCH / ENT | 10/100 | Training shells only; official banks are not imported and are now clearly labelled |
-| Photo recognition / OCR | 5/100 | Interface exists; public version does not perform real OCR |
+| Photo recognition / OCR | 10/100 | Interface honestly blocks fake recognition when OCR is unavailable; real OCR is not yet deployed |
 | Authentication and child links | 70/100 | Supabase tables/RLS/RPC exist; full multi-account live test is still required |
 | Parent, teacher and admin analytics | 45/100 | Data paths and UI exist; real dashboards need production activity and role-based E2E tests |
-| Security and privacy readiness | 65/100 | No service-role/OpenAI secret in public files; RLS exists; privacy policy, retention operations and live RLS attack tests remain |
+| Security and privacy readiness | 72/100 | No service-role/OpenAI secret in public files; RLS exists; child-facing privacy warning and answer reporting added; full policy, retention operations and live RLS attack tests remain |
 
 ## Defects Fixed During Audit
 
@@ -36,6 +36,10 @@ The strongest parts are the child-first entry flow, Grades 1-11 navigation, subj
 - The chat now states which answers are exact and when a full AI or verified official source is required.
 - Generic SOR/SOCH entries are labelled as non-official training rather than being presented as official assessments.
 - New backend profiles no longer use the name “Аружан” or invented marks.
+- Fraction, percentage, and simple linear-equation answers are now calculated and checked exactly.
+- Expressions with several operations are not reduced to a misleading partial answer.
+- The photo button no longer claims that an unavailable OCR service read the page.
+- Children can report an incorrect answer from the learning screen.
 
 ## Verified Example
 

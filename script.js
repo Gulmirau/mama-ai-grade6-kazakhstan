@@ -923,6 +923,10 @@ const explainAgainOptions = document.getElementById("explainAgainOptions");
 const photoActionChoices = document.getElementById("photoActionChoices");
 const voiceStatus = document.getElementById("voiceStatus");
 const assistantCapabilityNote = document.getElementById("assistantCapabilityNote");
+const reportAnswerBtn = document.getElementById("reportAnswerBtn");
+const answerReportForm = document.getElementById("answerReportForm");
+const answerReportText = document.getElementById("answerReportText");
+const cancelAnswerReportBtn = document.getElementById("cancelAnswerReportBtn");
 const praisePop = document.getElementById("praisePop");
 const confettiLayer = document.getElementById("confettiLayer");
 const subjectGrid = document.getElementById("learn");
@@ -1066,6 +1070,15 @@ function saveGuestState() {
   localStorage.setItem("mamaAiGuestPoints", String(guestState.points));
 }
 
+function syncCatalogToLearningContext() {
+  catalogGradeValue = currentGrade;
+  if (["ru", "kk"].includes(currentLang)) catalogLanguageValue = currentLang;
+  catalogSubjectValue = currentSubjectKey;
+  localStorage.setItem("mamaAiCatalogGrade", String(catalogGradeValue));
+  localStorage.setItem("mamaAiCatalogLanguage", catalogLanguageValue);
+  localStorage.setItem("mamaAiCatalogSubject", catalogSubjectValue);
+}
+
 function setAccessMode(mode) {
   appAccessMode = mode;
   document.body.classList.remove("mobile-menu-open");
@@ -1131,6 +1144,7 @@ function startGuestMode(silent = false) {
   localStorage.setItem("mamaAiLearningLang", currentLang);
   if (gradeSelect) gradeSelect.value = String(currentGrade);
   if (learningLanguageSelect) learningLanguageSelect.value = currentLang;
+  syncCatalogToLearningContext();
   guestWizardStep = 1;
   document.body.classList.remove("guest-ready");
   setAccessMode("guest");
@@ -2226,6 +2240,7 @@ function bindEvents() {
       localStorage.setItem("mamaAiGrade", String(currentGrade));
       gradeSelect.value = String(currentGrade);
       currentSubjectKey = getSubjectsForGrade()[0].key;
+      syncCatalogToLearningContext();
       guestWizardStep = 2;
       saveGuestState();
       renderAll();
@@ -2237,6 +2252,7 @@ function bindEvents() {
       const button = event.target.closest("button[data-subject]");
       if (!button) return;
       currentSubjectKey = button.dataset.subject;
+      syncCatalogToLearningContext();
       guestWizardStep = 3;
       saveGuestState();
       renderAll();
@@ -2421,11 +2437,10 @@ function bindEvents() {
 
   gradeSelect.addEventListener("change", () => {
     currentGrade = Number(gradeSelect.value);
-    catalogGradeValue = currentGrade;
     localStorage.setItem("mamaAiGrade", currentGrade);
-    localStorage.setItem("mamaAiCatalogGrade", String(catalogGradeValue));
     if (appAccessMode === "guest") saveGuestState();
     currentSubjectKey = getSubjectsForGrade()[0].key;
+    syncCatalogToLearningContext();
     recordEvent("Смена класса", `${currentGrade} класс`);
     initServerSession();
     renderAll();
@@ -2487,6 +2502,48 @@ function bindEvents() {
   document.getElementById("chatForm").addEventListener("submit", (event) => {
     event.preventDefault();
     sendMessage();
+  });
+
+  reportAnswerBtn?.addEventListener("click", () => {
+    answerReportForm.hidden = !answerReportForm.hidden;
+    if (!answerReportForm.hidden) answerReportText.focus();
+  });
+
+  cancelAnswerReportBtn?.addEventListener("click", () => {
+    answerReportForm.hidden = true;
+    answerReportText.value = "";
+  });
+
+  answerReportForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const report = answerReportText.value.trim();
+    if (!report) return;
+    try {
+      await apiFetch("/api/feedback", {
+        method: "POST",
+        body: {
+          text: `Ошибка в ответе: ${report}`,
+          helpful: false,
+          grade: currentGrade,
+          subject: currentSubjectKey,
+          answerExcerpt: lastAnswerText.slice(0, 500)
+        }
+      });
+      recordEvent("Отзыв", `Сообщение об ошибке: ${report.slice(0, 80)}`);
+      answerReportText.value = "";
+      answerReportForm.hidden = true;
+      addMessage("bot success", currentLang === "kk"
+        ? "Рақмет! Хабарлама сақталды. Маңызды жауапты мұғаліммен немесе ересекпен тексер."
+        : currentLang === "en"
+          ? "Thank you. The report was saved. Please check important answers with a teacher or trusted adult."
+          : "Спасибо! Сообщение сохранено. Важный ответ обязательно проверь с учителем или взрослым.");
+    } catch {
+      addMessage("bot", currentLang === "kk"
+        ? "Хабарламаны қазір жіберу мүмкін болмады. Жауапты ересекпен тексер."
+        : currentLang === "en"
+          ? "The report could not be sent now. Please check the answer with a trusted adult."
+          : "Сейчас не удалось отправить сообщение. Проверь ответ со взрослым.");
+    }
   });
 
   document.getElementById("kbSearchForm").addEventListener("submit", (event) => {
@@ -3572,7 +3629,16 @@ function makeAnswer(text) {
 function makeVerifiedArithmeticResponse(text, subject, language = "ru") {
   if (!["math", "algebra", "calculus"].includes(subject.key)) return null;
   const normalized = String(text || "").replace(/,/g, ".").toLowerCase();
-  let match = normalized.match(/(-?\d+(?:\.\d+)?)\s*([+\-*×xх÷/:])\s*(-?\d+(?:\.\d+)?)/);
+  const advancedResponse = makeVerifiedFractionResponse(normalized, language)
+    || makeVerifiedPercentResponse(normalized, language)
+    || makeVerifiedLinearEquationResponse(normalized, language);
+  if (advancedResponse) return advancedResponse;
+
+  const hasMultipleExplicitOperations = /-?\d+(?:\.\d+)?\s*[+\-*×xх÷/:]\s*-?\d+(?:\.\d+)?\s*[+\-*×xх÷/:]\s*-?\d/.test(normalized);
+  if (hasMultipleExplicitOperations) return null;
+
+  const operationMatches = [...normalized.matchAll(/(-?\d+(?:\.\d+)?)\s*([+\-*×xх÷/:])\s*(-?\d+(?:\.\d+)?)/g)];
+  let match = operationMatches.length === 1 ? operationMatches[0] : null;
   let operation = match?.[2] || "";
   let left = match ? Number(match[1]) : NaN;
   let right = match ? Number(match[3]) : NaN;
@@ -3589,7 +3655,20 @@ function makeVerifiedArithmeticResponse(text, subject, language = "ru") {
   }
 
   if (!Number.isFinite(left) || !Number.isFinite(right) || !operation) return null;
-  if (["/", ":", "÷"].includes(operation) && right === 0) return null;
+  if (["/", ":", "÷"].includes(operation) && right === 0) {
+    return makeVerifiedMathTutorResponse(language, {
+      condition: `${left} ÷ 0`,
+      hint: language === "kk" ? "Нөлге бөлуге болмайтынын есіңе түсір." : language === "en" ? "Recall what division means." : "Вспомни, что означает деление.",
+      steps: language === "kk"
+        ? ["Бөлуге кері амал — көбейту.", `Егер ${left} ÷ 0 = x болса, онда x × 0 = ${left} болуы керек.`, `Бірақ кез келген x үшін x × 0 = 0. Сондықтан ${left} саны шықпайды.`]
+        : language === "en"
+          ? ["Multiplication is the inverse of division.", `If ${left} ÷ 0 = x, then x × 0 would have to equal ${left}.`, `But x × 0 is always 0, so no such number exists.`]
+          : ["Обратное действие для деления — умножение.", `Если ${left} ÷ 0 = x, тогда должно выполняться x × 0 = ${left}.`, `Но x × 0 всегда равно 0. Значит, подходящего числа не существует.`],
+      answer: language === "kk" ? "Нөлге бөлу анықталмаған." : language === "en" ? "Division by zero is undefined." : "Деление на ноль не определено.",
+      check: language === "kk" ? "Кез келген санды 0-ге көбейтсек, 0 шығады." : language === "en" ? "Any number multiplied by 0 equals 0." : "Любое число при умножении на 0 даёт 0.",
+      similar: language === "kk" ? "Неліктен 0 ÷ 5 = 0, ал 5 ÷ 0 анықталмағанын түсіндір." : language === "en" ? "Explain why 0 ÷ 5 = 0 but 5 ÷ 0 is undefined." : "Объясни, почему 0 ÷ 5 = 0, а 5 ÷ 0 не определено."
+    });
+  }
 
   const normalizedOperation = operation === "×" || operation === "x" || operation === "х" || operation === "*" ? "×"
     : operation === "/" || operation === ":" || operation === "÷" ? "÷"
@@ -3648,7 +3727,111 @@ function makeVerifiedArithmeticResponse(text, subject, language = "ru") {
   ].join("\n\n");
 }
 
+function makeVerifiedMathTutorResponse(language, details) {
+  const labels = language === "kk"
+    ? { condition: "Шартты қысқаша түсіндіру", question: "Сұрақ", hint: "Кеңес", steps: "Қадамдық шешу", answer: "Жауап", check: "Тексеру", similar: "Ұқсас тапсырма", questionText: "Алғашқы қадамды өзің қалай түсіндірер едің?", praise: "Жарайсың! Сен шешу жолын түсініп, жауабыңды тексердің." }
+    : language === "en"
+      ? { condition: "Short explanation", question: "Question", hint: "Hint", steps: "Step-by-step solution", answer: "Answer", check: "Check", similar: "Similar task", questionText: "How would you explain the first step in your own words?", praise: "Well done! You followed the reasoning and checked the answer." }
+      : { condition: "Короткое объяснение условия", question: "Вопрос к тебе", hint: "Подсказка", steps: "Пошаговое решение", answer: "Ответ", check: "Проверка", similar: "Похожее задание", questionText: "Как бы ты объяснил(а) первый шаг своими словами?", praise: "Молодец! Ты разобрался(ась) в ходе решения и проверил(а) ответ." };
+  return [
+    `${labels.condition}: ${details.condition}`,
+    `${labels.question}: ${labels.questionText}`,
+    `${labels.hint}: ${details.hint}`,
+    `${labels.steps}:\n${details.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`,
+    `${labels.answer}: ${details.answer}`,
+    `${labels.check}: ${details.check}`,
+    `${labels.similar}: ${details.similar}`,
+    labels.praise
+  ].join("\n\n");
+}
+
+function makeVerifiedFractionResponse(normalized, language) {
+  const match = normalized.match(/(-?\d+)\s*\/\s*(\d+)\s*([+-])\s*(-?\d+)\s*\/\s*(\d+)/);
+  if (!match) return null;
+  const [, rawA, rawB, operation, rawC, rawD] = match;
+  const [a, b, c, d] = [rawA, rawB, rawC, rawD].map(Number);
+  if (!b || !d) return null;
+  const gcd = (left, right) => right ? gcd(right, left % right) : Math.abs(left);
+  const commonDenominator = Math.abs((b * d) / gcd(b, d));
+  const firstNumerator = a * (commonDenominator / b);
+  const secondNumerator = c * (commonDenominator / d);
+  const resultNumerator = operation === "+" ? firstNumerator + secondNumerator : firstNumerator - secondNumerator;
+  const divisor = gcd(resultNumerator, commonDenominator) || 1;
+  const reducedNumerator = resultNumerator / divisor;
+  const reducedDenominator = commonDenominator / divisor;
+  const answer = reducedDenominator === 1 ? String(reducedNumerator) : `${reducedNumerator}/${reducedDenominator}`;
+  const condition = language === "kk" ? `${a}/${b} және ${c}/${d} бөлшектерін ${operation === "+" ? "қосу" : "азайту"} керек.`
+    : language === "en" ? `We need to ${operation === "+" ? "add" : "subtract"} the fractions ${a}/${b} and ${c}/${d}.`
+      : `Нужно ${operation === "+" ? "сложить" : "вычесть"} дроби ${a}/${b} и ${c}/${d}.`;
+  const hint = language === "kk" ? "Алдымен ортақ бөлім тап." : language === "en" ? "Find a common denominator first." : "Сначала найди общий знаменатель.";
+  const steps = language === "kk"
+    ? [`Бөлімдері: ${b} және ${d}. Түсінікті ме?`, `Ортақ бөлім: ${commonDenominator}.`, `Алымдарды келтіреміз: ${firstNumerator}/${commonDenominator} ${operation} ${secondNumerator}/${commonDenominator}.`, `Алымдарға амал қолданамыз: ${resultNumerator}/${commonDenominator} = ${answer}.`]
+    : language === "en"
+      ? [`The denominators are ${b} and ${d}. Is that clear?`, `A common denominator is ${commonDenominator}.`, `Rewrite the fractions: ${firstNumerator}/${commonDenominator} ${operation} ${secondNumerator}/${commonDenominator}.`, `Combine the numerators: ${resultNumerator}/${commonDenominator} = ${answer}.`]
+      : [`Знаменатели равны ${b} и ${d}. Понятно, почему смотрим на них?`, `Общий знаменатель: ${commonDenominator}.`, `Приводим дроби: ${firstNumerator}/${commonDenominator} ${operation} ${secondNumerator}/${commonDenominator}.`, `Выполняем действие с числителями: ${resultNumerator}/${commonDenominator} = ${answer}.`];
+  const check = `${answer} ${operation === "+" ? "−" : "+"} ${c}/${d} = ${a}/${b}`;
+  const similar = `${a + 1}/${b} ${operation} ${c}/${d}`;
+  return makeVerifiedMathTutorResponse(language, { condition, hint, steps, answer, check, similar });
+}
+
+function makeVerifiedPercentResponse(normalized, language) {
+  const match = normalized.match(/(\d+(?:\.\d+)?)\s*%\s*(?:от|of|of\s+the\s+number|ы|і)?\s*(\d+(?:\.\d+)?)/i);
+  if (!match) return null;
+  const percent = Number(match[1]);
+  const value = Number(match[2]);
+  const result = value * percent / 100;
+  const format = (number) => Number.isInteger(number) ? String(number) : String(Number(number.toFixed(6))).replace(".", ",");
+  const answer = format(result);
+  const condition = language === "kk" ? `${format(value)} санының ${format(percent)}%-ын табу керек.` : language === "en" ? `Find ${format(percent)}% of ${format(value)}.` : `Нужно найти ${format(percent)}% от числа ${format(value)}.`;
+  const hint = language === "kk" ? "Пайыз — санның жүзден бір бөлігі." : language === "en" ? "A percent means one hundredth of a number." : "Процент — это сотая часть числа.";
+  const steps = language === "kk"
+    ? [`${format(percent)}% = ${format(percent)}/100. Түсінікті ме?`, `${format(value)} санын ${format(percent)}-ға көбейтеміз: ${format(value * percent)}.`, `Нәтижені 100-ге бөлеміз: ${format(value * percent)} ÷ 100 = ${answer}.`]
+    : language === "en"
+      ? [`${format(percent)}% = ${format(percent)}/100. Is that clear?`, `Multiply ${format(value)} by ${format(percent)}: ${format(value * percent)}.`, `Divide by 100: ${format(value * percent)} ÷ 100 = ${answer}.`]
+      : [`${format(percent)}% = ${format(percent)}/100. Понятно, почему делим на 100?`, `Умножаем ${format(value)} на ${format(percent)}: получаем ${format(value * percent)}.`, `Делим на 100: ${format(value * percent)} ÷ 100 = ${answer}.`];
+  const check = `${answer} ÷ ${format(value)} × 100% = ${format(percent)}%`;
+  const similar = language === "kk" ? `${format(value + 50)} санының ${format(percent)}%-ын тап.` : language === "en" ? `Find ${format(percent)}% of ${format(value + 50)}.` : `Найди ${format(percent)}% от ${format(value + 50)}.`;
+  return makeVerifiedMathTutorResponse(language, { condition, hint, steps, answer, check, similar });
+}
+
+function makeVerifiedLinearEquationResponse(normalized, language) {
+  const compact = normalized.replace(/\s+/g, "");
+  const match = compact.match(/^([+-]?(?:\d+(?:\.\d+)?)?)?[xх]([+-]\d+(?:\.\d+)?)?=(-?\d+(?:\.\d+)?)$/);
+  if (!match) return null;
+  const rawCoefficient = match[1] || "";
+  const coefficient = rawCoefficient === "" || rawCoefficient === "+" ? 1 : rawCoefficient === "-" ? -1 : Number(rawCoefficient);
+  const constant = Number(match[2] || 0);
+  const right = Number(match[3]);
+  if (!Number.isFinite(coefficient) || coefficient === 0 || !Number.isFinite(right)) return null;
+  const result = (right - constant) / coefficient;
+  const format = (number) => Number.isInteger(number) ? String(number) : String(Number(number.toFixed(6))).replace(".", ",");
+  const answer = `x = ${format(result)}`;
+  const condition = language === "kk" ? `${compact} теңдеуіндегі x мәнін табу керек.` : language === "en" ? `Find x in the equation ${compact}.` : `Нужно найти x в уравнении ${compact}.`;
+  const hint = language === "kk" ? "x бар мүшені жалғыз қалдыр." : language === "en" ? "Isolate the term containing x." : "Оставь слагаемое с x отдельно.";
+  const moved = right - constant;
+  const steps = language === "kk"
+    ? [`Тұрақты мүшені оң жаққа көшіреміз: ${format(coefficient)}x = ${format(right)} − (${format(constant)}) = ${format(moved)}.`, `Екі жақты ${format(coefficient)} санына бөлеміз. Неліктен?`, `x = ${format(moved)} ÷ ${format(coefficient)} = ${format(result)}.`]
+    : language === "en"
+      ? [`Move the constant term: ${format(coefficient)}x = ${format(right)} − (${format(constant)}) = ${format(moved)}.`, `Divide both sides by ${format(coefficient)}. Why does this keep the equation balanced?`, `x = ${format(moved)} ÷ ${format(coefficient)} = ${format(result)}.`]
+      : [`Переносим постоянное слагаемое: ${format(coefficient)}x = ${format(right)} − (${format(constant)}) = ${format(moved)}.`, `Делим обе части на ${format(coefficient)}. Понятно, почему равенство сохраняется?`, `x = ${format(moved)} ÷ ${format(coefficient)} = ${format(result)}.`];
+  const checkValue = coefficient * result + constant;
+  const check = `${format(coefficient)} × ${format(result)} + (${format(constant)}) = ${format(checkValue)} = ${format(right)}`;
+  const similar = `${format(coefficient)}x + ${format(constant + coefficient)} = ${format(right + coefficient)}`;
+  return makeVerifiedMathTutorResponse(language, { condition, hint, steps, answer, check, similar });
+}
+
 async function handlePhotoUpload(file) {
+  if (!aiConfigured) {
+    const message = currentLang === "kk"
+      ? "Фото таңдалды, бірақ бұл жария нұсқада мәтінді тану әлі қосылмаған. Тапсырманың мәтінін чатқа жаз немесе көшір. Mama AI суретті оқыдым деп көрсетпейді."
+      : currentLang === "en"
+        ? "The photo was selected, but text recognition is not connected in this public version yet. Type or paste the task into the chat. Mama AI will not pretend it has read the image."
+        : "Фото выбрано, но в публичной версии распознавание текста пока не подключено. Напиши или вставь условие в чат. Mama AI не будет делать вид, что прочитала изображение.";
+    addMessage("bot", message);
+    document.getElementById("photoStatus").textContent = message;
+    userInput.focus();
+    return;
+  }
   addMessage("bot", "Фото принято. Сейчас помогу разобрать задание по шагам.");
   try {
     const imageData = await fileToDataUrl(file);

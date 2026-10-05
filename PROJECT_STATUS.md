@@ -1,5 +1,20 @@
 # Mama AI Project Status
 
+## 2026-10-05 Child Reliability Pass
+
+- The selected learning grade, subject, textbook grade, and textbook subject now stay synchronized.
+- Added exact step-by-step solvers for fraction addition/subtraction, percentages, and simple linear equations.
+- Multi-operation expressions are no longer answered using only the first operation.
+- Division by zero receives a checked educational explanation instead of an invented numeric answer.
+- The public photo tool now clearly says when OCR is unavailable and does not pretend to read the image.
+- Children can report an incorrect or unclear answer directly beside the chat.
+- Added a visible privacy and AI-error warning in Russian, Kazakh, and English.
+- Added a browser-based child readiness test covering the complete guest path and verified answers.
+- Public GitHub Pages deployment now includes Supabase, the official textbook catalog, and all required runtime files.
+- Verified locally and publicly at 320, 360, 375, 390, 412, 430, 768, and 1280 px.
+
+Current readiness: **65/100 overall**, with the safe deterministic child-learning core ready for supervised use. A truthful 90-100% still requires a deployed private AI service, reviewed curriculum/textbook page content, licensed SOR/SOCH/ENT banks, real OCR, and live multi-role security tests.
+
 ## 2026-10-05 Full Quality Audit
 
 - Completed a live child-flow and answer-quality audit.

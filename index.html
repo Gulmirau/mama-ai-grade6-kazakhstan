@@ -528,6 +528,20 @@
           <p class="assistant-capability-note" id="assistantCapabilityNote" role="status">
             Базовые примеры проверяются точно. Для сложных заданий Mama AI даст безопасную стратегию и честно сообщит, если требуется полноценный AI или официальный материал.
           </p>
+          <div class="answer-safety-note">
+            <span data-i18n="answerSafetyNote">Mama AI может ошибаться. Не отправляй адрес, телефон, пароль и другие личные данные. Важный ответ проверь с учителем или взрослым.</span>
+            <button class="ghost-btn" id="reportAnswerBtn" type="button" data-i18n="reportAnswer">Сообщить об ошибке</button>
+          </div>
+          <form class="answer-report-form" id="answerReportForm" hidden>
+            <label>
+              <span data-i18n="reportAnswerPrompt">Что в ответе неверно или непонятно?</span>
+              <textarea id="answerReportText" data-i18n-placeholder="reportAnswerPlaceholder" placeholder="Коротко опиши проблему"></textarea>
+            </label>
+            <div class="answer-report-actions">
+              <button class="primary-btn" type="submit" data-i18n="sendReport">Отправить</button>
+              <button class="ghost-btn" id="cancelAnswerReportBtn" type="button" data-i18n="cancel">Отмена</button>
+            </div>
+          </form>
 
           <div class="chat" id="chat" aria-live="polite">
             <div class="message bot">

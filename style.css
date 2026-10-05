@@ -696,6 +696,44 @@ img.book-cover-placeholder {
   line-height: 1.45;
 }
 
+.answer-safety-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid #cbd8e5;
+  border-radius: 8px;
+  background: #f7fafc;
+  color: #40505f;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.answer-safety-note .ghost-btn {
+  flex: 0 0 auto;
+}
+
+.answer-report-form {
+  margin: 0 0 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.answer-report-form textarea {
+  min-height: 86px;
+}
+
+.answer-report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 .panel-heading.compact { margin-bottom: 12px; }
 
 .control-grid {
@@ -2085,6 +2123,16 @@ body.child-mode .nav-list a[href="#analytics"] {
   .feedback-actions {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .answer-safety-note {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .answer-safety-note .ghost-btn,
+  .answer-report-actions > * {
+    width: 100%;
   }
 
   .auth-actions > *,
