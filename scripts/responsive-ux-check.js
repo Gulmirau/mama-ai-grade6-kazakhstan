@@ -33,6 +33,41 @@ async function hasHorizontalOverflow(page) {
   });
 }
 
+async function inspectMobileControls(page, viewport) {
+  return page.evaluate(({ width }) => {
+    const selectors = [
+      "input:not([type='hidden'])",
+      "select",
+      "textarea",
+      "button"
+    ];
+    const visibleControls = Array.from(document.querySelectorAll(selectors.join(",")))
+      .filter((element) => {
+        const style = window.getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+      });
+    const undersized = visibleControls
+      .filter((element) => element.getBoundingClientRect().height < 44)
+      .map((element) => `${element.tagName.toLowerCase()}#${element.id || "(no-id)"}.${element.className || "(no-class)"}[${element.textContent.trim().slice(0, 24)}]:${Math.round(element.getBoundingClientRect().height)}`);
+    const formFontSizes = visibleControls
+      .filter((element) => ["INPUT", "SELECT", "TEXTAREA"].includes(element.tagName))
+      .map((element) => Number.parseFloat(window.getComputedStyle(element).fontSize));
+    const columnCount = (selector) => {
+      const element = document.querySelector(selector);
+      if (!element || window.getComputedStyle(element).display === "none") return null;
+      return window.getComputedStyle(element).gridTemplateColumns.split(" ").filter(Boolean).length;
+    };
+    return {
+      width,
+      undersized,
+      hasSmallFormFont: formFontSizes.some((size) => size < 16),
+      inputColumns: columnCount(".input-row"),
+      actionColumns: columnCount(".subject-action-panel")
+    };
+  }, viewport);
+}
+
 async function main() {
   let browser;
   try {
@@ -80,6 +115,19 @@ async function main() {
     await page.waitForSelector("#assistant");
     result = await hasHorizontalOverflow(page);
     if (result.overflow) failures.push(`${viewport.width}: workspace overflow ${JSON.stringify(result)}`);
+
+    if (viewport.width <= 480) {
+      const mobileControls = await inspectMobileControls(page, viewport);
+      if (mobileControls.undersized.length) {
+        failures.push(`${viewport.width}: controls below 44px ${JSON.stringify(mobileControls.undersized)}`);
+      }
+      if (mobileControls.hasSmallFormFont) {
+        failures.push(`${viewport.width}: form text below 16px`);
+      }
+      if (mobileControls.inputColumns !== 1) {
+        failures.push(`${viewport.width}: chat form is not single-column ${JSON.stringify(mobileControls)}`);
+      }
+    }
 
     await page.close();
   }

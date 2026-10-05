@@ -2114,4 +2114,219 @@ body.child-mode .nav-list a[href="#analytics"] {
   .big-action {
     min-height: 48px;
   }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  summary {
+    touch-action: manipulation;
+  }
+
+  .mobile-menu-btn {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .sidebar {
+    padding-top: calc(18px + env(safe-area-inset-top));
+    padding-bottom: calc(18px + env(safe-area-inset-bottom));
+  }
+
+  .help-drawer {
+    padding-top: calc(22px + env(safe-area-inset-top));
+    padding-right: calc(22px + env(safe-area-inset-right));
+    padding-bottom: calc(22px + env(safe-area-inset-bottom));
+    padding-left: calc(22px + env(safe-area-inset-left));
+  }
+
+  .help-fab {
+    right: calc(12px + env(safe-area-inset-right));
+    bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .catalog-card-actions > *,
+  .assistant-actions > *,
+  .photo-action-choices > *,
+  .explain-again-options > * {
+    min-height: 48px;
+  }
+}
+
+@media (max-width: 480px) {
+  .workspace {
+    padding: 12px;
+    padding-right: calc(12px + env(safe-area-inset-right));
+    padding-bottom: calc(18px + env(safe-area-inset-bottom));
+    padding-left: calc(12px + env(safe-area-inset-left));
+  }
+
+  .landing-panel,
+  .wizard-card,
+  .child-home-panel,
+  .guest-limit-panel,
+  .profile-panel,
+  .assistant-panel,
+  .quiz-panel,
+  .parent-panel,
+  .textbook-catalog-panel,
+  .materials-panel,
+  .knowledge-panel,
+  .account-panel,
+  .learning-plan-panel,
+  .trainer-panel,
+  .parent-insight-panel,
+  .analytics-panel {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .landing-panel {
+    min-height: calc(100dvh - 24px);
+  }
+
+  .landing-copy h1 {
+    font-size: 28px;
+    line-height: 1.15;
+  }
+
+  .landing-actions,
+  .landing-language,
+  .guide-controls,
+  .tour-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .landing-actions > *,
+  .landing-language > *,
+  .guide-controls > *,
+  .tour-actions > * {
+    width: 100%;
+  }
+
+  .grade-choice-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .grade-choice-grid button {
+    min-height: 58px;
+    padding: 8px;
+    border-radius: 12px;
+    font-size: 21px;
+  }
+
+  .subject-choice-grid button,
+  .action-choice-grid button {
+    border-radius: 12px;
+  }
+
+  .catalog-stats,
+  .catalog-steps,
+  .subject-action-panel,
+  .assistant-actions,
+  .photo-action-choices,
+  .explain-again-options {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .catalog-stats {
+    gap: 1px;
+  }
+
+  .catalog-steps span {
+    padding-inline: 4px;
+  }
+
+  .subject-action-panel button,
+  .assistant-actions > *,
+  .photo-action-choices > *,
+  .explain-again-options > *,
+  .catalog-card-actions > *,
+  .textbook-page-helper button,
+  .homework-form button,
+  .homework-photo-btn,
+  .kb-search button,
+  .input-row button {
+    width: 100%;
+  }
+
+  .textbook-catalog-card {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .book-cover-placeholder {
+    width: 64px;
+  }
+
+  .catalog-card-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .catalog-card-actions a {
+    justify-content: center;
+  }
+
+  .catalog-card-actions button,
+  .catalog-card-actions a {
+    min-height: 48px;
+  }
+
+  .related-material-item,
+  .my-textbook-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .my-textbook-item button {
+    width: 100%;
+  }
+
+  .chat {
+    height: min(48dvh, 420px);
+    min-height: 280px;
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .message {
+    padding: 11px 12px;
+    border-radius: 14px;
+    overflow-wrap: anywhere;
+  }
+
+  .video-modal {
+    padding: 8px;
+  }
+
+  .video-card {
+    width: 100%;
+    max-height: calc(100dvh - 16px);
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .guide-slide {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .tour-card {
+    left: 8px !important;
+    right: 8px;
+    width: auto;
+    max-width: calc(100vw - 16px);
+    border-radius: 14px;
+  }
 }
