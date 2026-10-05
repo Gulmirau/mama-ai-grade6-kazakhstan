@@ -31,7 +31,15 @@ jobs:
       - name: Prepare static site
         run: |
           mkdir -p public_site
-          cp index.html style.css script.js i18n.js public_site/
+          cp \
+            index.html \
+            style.css \
+            script.js \
+            i18n.js \
+            config.js \
+            supabase-client.js \
+            official_textbooks.js \
+            public_site/
           cat > public_site/README_PUBLIC.txt <<'TXT'
           Mama AI public interface.
 

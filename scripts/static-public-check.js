@@ -3,6 +3,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const workspaceRoot = path.resolve(__dirname, "..", "..");
+const projectRoot = path.resolve(__dirname, "..");
 const publicDir = path.join(workspaceRoot, "mama_ai_public_static");
 
 function fail(message) {
@@ -12,6 +13,11 @@ function fail(message) {
 for (const fileName of ["index.html", "style.css", "config.js", "supabase-client.js", "i18n.js", "script.js", "official_textbooks.js"]) {
   const filePath = path.join(publicDir, fileName);
   if (!fs.existsSync(filePath)) fail(`Missing public file: ${fileName}`);
+}
+
+const pagesWorkflow = fs.readFileSync(path.join(projectRoot, ".github", "workflows", "deploy-pages.yml"), "utf8");
+for (const fileName of ["index.html", "style.css", "config.js", "supabase-client.js", "i18n.js", "script.js", "official_textbooks.js"]) {
+  if (!pagesWorkflow.includes(fileName)) fail(`GitHub Pages workflow does not publish: ${fileName}`);
 }
 
 const html = fs.readFileSync(path.join(publicDir, "index.html"), "utf8");
