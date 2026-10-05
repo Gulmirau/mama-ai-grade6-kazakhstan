@@ -686,6 +686,16 @@ img.book-cover-placeholder {
   gap: 8px;
 }
 
+.assistant-capability-note {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-left: 4px solid var(--gold);
+  background: #fff9df;
+  color: #51471f;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
 .panel-heading.compact { margin-bottom: 12px; }
 
 .control-grid {

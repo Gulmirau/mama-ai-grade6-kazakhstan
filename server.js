@@ -66,7 +66,7 @@ async function routeApi(req, res, url) {
     const db = readDb();
     runAccountLifecycle(db);
     const role = body.role || "student";
-    const name = cleanText(body.name || "Аружан");
+    const name = cleanText(body.name || "Ученик");
     const city = normalizeCity(body.city || "Алматы");
     const email = normalizeEmail(body.email || "");
     const authProvider = cleanText(body.authProvider || "email");
@@ -1452,13 +1452,9 @@ function createStudent(name, grade, city = "") {
     city: normalizeCity(city),
     role: "student",
     status: "active",
-    points: 120,
-    streak: 5,
-    grades: [
-      { subject: "Математика", value: 4, date: "2026-07-01", type: "СОР" },
-      { subject: "Английский язык", value: 5, date: "2026-07-02", type: "Домашняя работа" },
-      { subject: "Естествознание", value: 4, date: "2026-07-03", type: "СОЧ" }
-    ],
+    points: 0,
+    streak: 0,
+    grades: [],
     createdAt: new Date().toISOString(),
     lastSeenAt: new Date().toISOString()
   };
@@ -1476,7 +1472,7 @@ function getOrCreateStudent(db, session, body) {
     if (existing) return existing;
   }
 
-  const name = cleanText(body.studentName || body.name || "Аружан");
+  const name = cleanText(body.studentName || body.name || "Ученик");
   const grade = clampGrade(body.grade || 6);
   const city = normalizeCity(body.city || "");
   const email = normalizeEmail(body.email || "");
@@ -1596,6 +1592,9 @@ async function askOpenAI(promptData, imageData) {
 }
 
 function makeTutorFallback(data) {
+  const verifiedArithmetic = makeVerifiedArithmeticFallback(data);
+  if (verifiedArithmetic) return verifiedArithmetic;
+
   const modeNames = {
     school: "школьная программа",
     sor: "подготовка к СОР",
@@ -1662,6 +1661,77 @@ function makeTutorFallback(data) {
     "Проверка: перечитай вопрос и сравни с ответом. Ответили именно на то, что спрашивали?",
     `Похожее задание: составь один более простой пример по теме "${data.topic}" и реши его тем же способом.`,
     "Похвала: молодец, что пробуешь разобраться. За попытку начислены баллы, а понимание важнее списывания."
+  ].join("\n\n");
+}
+
+function makeVerifiedArithmeticFallback(data) {
+  if (!["math", "algebra", "calculus"].includes(data.subjectKey)) return null;
+  const normalized = String(data.question || "").replace(/,/g, ".").toLowerCase();
+  let match = normalized.match(/(-?\d+(?:\.\d+)?)\s*([+\-*×xх÷/:])\s*(-?\d+(?:\.\d+)?)/);
+  let operation = match?.[2] || "";
+  let left = match ? Number(match[1]) : NaN;
+  let right = match ? Number(match[3]) : NaN;
+
+  if (!match) {
+    const numbers = normalized.match(/-?\d+(?:\.\d+)?/g)?.map(Number) || [];
+    if (numbers.length === 2 && /(остал|отдал|потрат|съел|ушл|убав|қалды|берді|left|gave away)/i.test(normalized)) {
+      [left, right] = numbers;
+      operation = "-";
+    } else if (numbers.length === 2 && /(всего|стало|добав|вместе|барлығы|қос|total|altogether)/i.test(normalized)) {
+      [left, right] = numbers;
+      operation = "+";
+    }
+  }
+
+  if (!Number.isFinite(left) || !Number.isFinite(right) || !operation) return null;
+  if (["/", ":", "÷"].includes(operation) && right === 0) return null;
+  const symbol = ["×", "x", "х", "*"].includes(operation) ? "×" : ["/", ":", "÷"].includes(operation) ? "÷" : operation;
+  const result = symbol === "+" ? left + right : symbol === "-" ? left - right : symbol === "×" ? left * right : left / right;
+  if (!Number.isFinite(result)) return null;
+
+  const format = (value) => Number.isInteger(value) ? String(value) : String(Number(value.toFixed(6))).replace(".", ",");
+  const a = format(left);
+  const b = format(right);
+  const answer = format(result);
+  const expression = `${a} ${symbol} ${b} = ${answer}`;
+  const inverse = symbol === "-" ? `${answer} + ${b} = ${a}`
+    : symbol === "+" ? `${answer} − ${b} = ${a}`
+      : symbol === "×" && left !== 0 ? `${answer} ÷ ${a} = ${b}`
+        : symbol === "÷" ? `${answer} × ${b} = ${a}` : expression;
+
+  if (data.language === "kk") {
+    return [
+      `Қысқаша түсіндіру: есепте ${a} және ${b} сандары берілген.`,
+      "Сұрақ: қай амал керек екенін қалай анықтадың?",
+      `Кеңес: негізгі сөзді тауып, ${a} санынан баста.`,
+      `Қадамдық шешу:\n1. ${a} және ${b} сандарын жазамыз. Түсінікті ме?\n2. ${symbol} амалын таңдаймыз. Неліктен?\n3. Есептейміз: ${expression}.`,
+      `Жауап: ${answer}.`,
+      `Тексеру: ${inverse}.`,
+      `Ұқсас тапсырма: ${format(left + 2)} ${symbol} ${format(right + 1)} мәнін тап.`,
+      "Жарайсың! Нәтижені кері амалмен тексердің."
+    ].join("\n\n");
+  }
+  if (data.language === "en") {
+    return [
+      `Short explanation: the task gives the numbers ${a} and ${b}.`,
+      "Question: how did you choose the operation?",
+      `Hint: find the key word and start with ${a}.`,
+      `Step-by-step solution:\n1. Write ${a} and ${b}. Is that clear?\n2. Choose ${symbol}. Why does it fit?\n3. Calculate: ${expression}.`,
+      `Answer: ${answer}.`,
+      `Check: ${inverse}.`,
+      `Similar task: find ${format(left + 2)} ${symbol} ${format(right + 1)}.`,
+      "Well done! You checked the result with the inverse operation."
+    ].join("\n\n");
+  }
+  return [
+    `Короткое объяснение условия: в задаче даны числа ${a} и ${b}.`,
+    "Вопрос к тебе: как ты понял(а), какое действие нужно выбрать?",
+    `Подсказка: найди ключевое слово и начни с числа ${a}.`,
+    `Пошаговое решение:\n1. Выписываем ${a} и ${b}. Понятно, почему берём эти числа?\n2. Выбираем действие ${symbol}. Почему оно подходит?\n3. Считаем: ${expression}.`,
+    `Ответ: ${answer}.`,
+    `Проверка: ${inverse}.`,
+    `Похожее задание: вычисли ${format(left + 2)} ${symbol} ${format(right + 1)}.`,
+    "Молодец! Ты решил(а) задачу и проверил(а) результат."
   ].join("\n\n");
 }
 

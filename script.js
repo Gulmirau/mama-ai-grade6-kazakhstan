@@ -772,6 +772,25 @@ const quizBank = {
   }
 };
 
+const gradeQuizBank = {
+  math12: {
+    question: "Сколько будет 6 − 2?",
+    answers: [["4", true], ["3", false], ["8", false]]
+  },
+  math34: {
+    question: "Сколько будет 7 × 4?",
+    answers: [["28", true], ["21", false], ["32", false]]
+  },
+  math56: {
+    question: "Чему равно 3/4 − 1/4?",
+    answers: [["1/2", true], ["2/8", false], ["1", false]]
+  },
+  geometry: {
+    question: "Чему равна сумма углов треугольника?",
+    answers: [["180°", true], ["90°", false], ["360°", false]]
+  }
+};
+
 const trainerBank = [
   {
     mode: "gia",
@@ -848,9 +867,9 @@ let catalogGradeValue = Number(localStorage.getItem("mamaAiCatalogGrade") || cur
 let catalogLanguageValue = localStorage.getItem("mamaAiCatalogLanguage") || (currentLang === "kk" ? "kk" : "ru");
 let catalogPathwayValue = localStorage.getItem("mamaAiCatalogPathway") || "all";
 let catalogSubjectValue = localStorage.getItem("mamaAiCatalogSubject") || currentSubjectKey || "math";
-let points = Number(localStorage.getItem("mamaAiPoints") || 120);
-let streak = 5;
-let level = 3;
+let points = Number(localStorage.getItem("mamaAiPoints") || 0);
+let streak = Number(localStorage.getItem("mamaAiStreak") || 0);
+let level = Math.max(1, Math.floor(points / 100) + 1);
 let apiToken = localStorage.getItem("mamaAiApiToken") || "";
 let serverOnline = false;
 let aiConfigured = false;
@@ -903,6 +922,7 @@ const notUnderstoodBtn = document.getElementById("notUnderstoodBtn");
 const explainAgainOptions = document.getElementById("explainAgainOptions");
 const photoActionChoices = document.getElementById("photoActionChoices");
 const voiceStatus = document.getElementById("voiceStatus");
+const assistantCapabilityNote = document.getElementById("assistantCapabilityNote");
 const praisePop = document.getElementById("praisePop");
 const confettiLayer = document.getElementById("confettiLayer");
 const subjectGrid = document.getElementById("learn");
@@ -1081,8 +1101,7 @@ function showGuestLimit() {
 function consumeGuestAction(pointsDelta = 0) {
   if (appAccessMode !== "guest") return true;
   guestState.actionsUsed += 1;
-  guestState.points = Math.max(0, Number(guestState.points || 0) + Number(pointsDelta || 0));
-  points = Math.max(points, guestState.points);
+  guestState.points = Math.max(0, Number(points || guestState.points || 0));
   saveGuestState();
   updateGuestPanel();
   return true;
@@ -2542,11 +2561,29 @@ function renderAll() {
   renderAccountAndParent();
   renderTrainerQuestion();
   renderQuiz();
+  renderAssistantCapabilityStatus();
   renderScore();
   renderAnalytics();
   chatTitle.textContent = subjectLabel(currentSubject().title);
   renderGuestWizard();
   renderChildHome();
+}
+
+function renderAssistantCapabilityStatus() {
+  if (!assistantCapabilityNote) return;
+  if (aiConfigured) {
+    assistantCapabilityNote.textContent = currentLang === "kk"
+      ? "AI қосылған. Жауапты оқулықпен салыстырып, соңғы нәтижені өзің де тексер."
+      : currentLang === "en"
+        ? "AI is connected. Compare the explanation with your textbook and check the final result."
+        : "AI подключён. Сверяй объяснение с учебником и обязательно проверяй итоговый результат.";
+    return;
+  }
+  assistantCapabilityNote.textContent = currentLang === "kk"
+    ? "Қарапайым арифметикалық мысалдар дәл тексеріледі. Күрделі тапсырма үшін толық AI немесе ресми материал қажет болса, Mama AI оны ашық айтады."
+    : currentLang === "en"
+      ? "Basic arithmetic is checked exactly. For a complex task, Mama AI clearly says when full AI or verified official material is required."
+      : "Базовые арифметические примеры проверяются точно. Для сложного задания Mama AI честно сообщает, если нужен полноценный AI или проверенный официальный материал.";
 }
 
 function isNoMarksGrade() {
@@ -2683,15 +2720,16 @@ function renderMaterials() {
 
   document.getElementById("resourceList").innerHTML = renderResourceRecords(textbookRecords);
 
+  const quiz = getQuizForContext();
   const assessmentItems = isNoMarksGrade()
     ? [
       noMarksText(),
-      `<strong>${t("miniTest")}:</strong> ${quizBank[subject.key]?.question || quizBank.default.question}`
+      `<strong>${t("miniTest")}:</strong> ${quiz.question}`
     ]
     : [
-      ...curriculum.sorTopics[subject.title].map((item) => `<strong>СОР:</strong> ${item}`),
-      ...curriculum.sochTopics[subject.title].map((item) => `<strong>СОЧ:</strong> ${item}`),
-      `<strong>${t("miniTest")}:</strong> ${quizBank[subject.key]?.question || quizBank.default.question}`
+      `<strong>Тренировка к СОР:</strong> неофициальные упражнения по темам класса; официальный комплект ожидает импорт.`,
+      `<strong>Тренировка к СОЧ:</strong> повторение тем четверти; официальный комплект ожидает импорт.`,
+      `<strong>${t("miniTest")}:</strong> ${quiz.question}`
     ];
   document.getElementById("assessmentList").innerHTML = assessmentItems.map((item) => `<li>${item}</li>`).join("");
 }
@@ -3398,17 +3436,28 @@ async function checkTrainerAnswer(button) {
 }
 
 function renderQuiz() {
-  const bank = modeSelect.value === "unt" ? quizBank.unt : (quizBank[currentSubjectKey] || quizBank.default);
+  const bank = getQuizForContext();
   document.getElementById("quizTitle").textContent = modeSelect.value === "unt" ? "Подготовка к ЕНТ" : "Проверь понимание";
   quizQuestion.textContent = bank.question;
   quizResult.textContent = "";
   answerGrid.innerHTML = bank.answers.map(([text, correct]) => `<button data-correct="${correct}">${text}</button>`).join("");
 }
 
+function getQuizForContext() {
+  if (modeSelect.value === "unt") return quizBank.unt;
+  if (currentSubjectKey === "math") {
+    if (currentGrade <= 2) return gradeQuizBank.math12;
+    if (currentGrade <= 4) return gradeQuizBank.math34;
+    if (currentGrade <= 6) return gradeQuizBank.math56;
+  }
+  if (currentSubjectKey === "geometry") return gradeQuizBank.geometry;
+  return quizBank[currentSubjectKey] || quizBank.default;
+}
+
 async function sendMessage() {
   const text = userInput.value.trim();
   if (!text) return;
-  if (!consumeGuestAction(2)) {
+  if (!consumeGuestAction()) {
     addMessage("bot", "Можно продолжать заниматься без регистрации. Выбери предмет или напиши вопрос.");
     return;
   }
@@ -3464,6 +3513,8 @@ function makeAnswer(text) {
   const topic = detectTopic(subject, lower);
   const difficulty = detectDifficulty(lower);
   const ageTone = getAgeTone();
+  const verifiedArithmetic = makeVerifiedArithmeticResponse(text, subject, currentLang);
+  if (verifiedArithmetic) return verifiedArithmetic;
 
   if (currentLang === "kk") {
     return makeTutorResponse({
@@ -3516,6 +3567,85 @@ function makeAnswer(text) {
     ageTone,
     mode: modeSelect.value
   });
+}
+
+function makeVerifiedArithmeticResponse(text, subject, language = "ru") {
+  if (!["math", "algebra", "calculus"].includes(subject.key)) return null;
+  const normalized = String(text || "").replace(/,/g, ".").toLowerCase();
+  let match = normalized.match(/(-?\d+(?:\.\d+)?)\s*([+\-*×xх÷/:])\s*(-?\d+(?:\.\d+)?)/);
+  let operation = match?.[2] || "";
+  let left = match ? Number(match[1]) : NaN;
+  let right = match ? Number(match[3]) : NaN;
+
+  if (!match) {
+    const numbers = normalized.match(/-?\d+(?:\.\d+)?/g)?.map(Number) || [];
+    if (numbers.length === 2 && /(остал|отдал|потрат|съел|ушл|убав|қалды|берді|left|gave away)/i.test(normalized)) {
+      [left, right] = numbers;
+      operation = "-";
+    } else if (numbers.length === 2 && /(всего|стало|добав|вместе|барлығы|қос|total|altogether)/i.test(normalized)) {
+      [left, right] = numbers;
+      operation = "+";
+    }
+  }
+
+  if (!Number.isFinite(left) || !Number.isFinite(right) || !operation) return null;
+  if (["/", ":", "÷"].includes(operation) && right === 0) return null;
+
+  const normalizedOperation = operation === "×" || operation === "x" || operation === "х" || operation === "*" ? "×"
+    : operation === "/" || operation === ":" || operation === "÷" ? "÷"
+      : operation;
+  const result = normalizedOperation === "+" ? left + right
+    : normalizedOperation === "-" ? left - right
+      : normalizedOperation === "×" ? left * right
+        : left / right;
+  if (!Number.isFinite(result)) return null;
+
+  const formatNumber = (value) => Number.isInteger(value) ? String(value) : String(Number(value.toFixed(6))).replace(".", ",");
+  const a = formatNumber(left);
+  const b = formatNumber(right);
+  const answer = formatNumber(result);
+  const expression = `${a} ${normalizedOperation} ${b} = ${answer}`;
+  const inverse = normalizedOperation === "-" ? `${answer} + ${b} = ${a}`
+    : normalizedOperation === "+" ? `${answer} − ${b} = ${a}`
+      : normalizedOperation === "×" && left !== 0 ? `${answer} ÷ ${a} = ${b}`
+        : normalizedOperation === "÷" ? `${answer} × ${b} = ${a}` : expression;
+  const similarLeft = formatNumber(left + 2);
+  const similarRight = formatNumber(right + 1);
+
+  if (language === "kk") {
+    return [
+      `Қысқаша түсіндіру: есепте екі сан бар: ${a} және ${b}. «${normalizedOperation}» амалы олардың қалай өзгеретінін көрсетеді.`,
+      "Сұрақ: қай амал керек екенін өзің қалай анықтадың?",
+      `Кеңес: есептің негізгі сөзін тап та, ${a} санынан баста.`,
+      `Қадамдық шешу:\n1. Берілген сандарды жазамыз: ${a} және ${b}. Түсінікті ме?\n2. Амалды таңдаймыз: ${normalizedOperation}. Неліктен осы амал?\n3. Есептейміз: ${expression}.`,
+      `Жауап: ${answer}.`,
+      `Тексеру: кері амалмен тексереміз: ${inverse}.`,
+      `Ұқсас тапсырма: ${similarLeft} ${normalizedOperation} ${similarRight} мәнін тап.`,
+      "Жарайсың! Сен есептің амалын таңдап, нәтижені тексердің."
+    ].join("\n\n");
+  }
+  if (language === "en") {
+    return [
+      `Short explanation: the task uses the numbers ${a} and ${b}. The “${normalizedOperation}” sign tells us how they change.`,
+      "Question: how did you decide which operation to use?",
+      `Hint: find the key word and begin with ${a}.`,
+      `Step-by-step solution:\n1. Write the known numbers: ${a} and ${b}. Is that clear?\n2. Choose the operation: ${normalizedOperation}. Why does it fit?\n3. Calculate: ${expression}.`,
+      `Answer: ${answer}.`,
+      `Check: use the inverse operation: ${inverse}.`,
+      `Similar task: find ${similarLeft} ${normalizedOperation} ${similarRight}.`,
+      "Well done! You chose an operation and checked the result."
+    ].join("\n\n");
+  }
+  return [
+    `Короткое объяснение условия: в задаче есть числа ${a} и ${b}. Знак или смысл слов показывает действие «${normalizedOperation}».`,
+    "Вопрос к тебе: как ты понял(а), какое действие здесь нужно?",
+    `Подсказка: найди ключевое слово в условии и начни с числа ${a}.`,
+    `Пошаговое решение:\n1. Выписываем известные числа: ${a} и ${b}. Понятно, почему берём именно их?\n2. Выбираем действие: ${normalizedOperation}. Как думаешь, почему оно подходит?\n3. Считаем: ${expression}.`,
+    `Ответ: ${answer}.`,
+    `Проверка: выполняем обратное действие: ${inverse}. Равенство верное.`,
+    `Похожее задание: вычисли ${similarLeft} ${normalizedOperation} ${similarRight}.`,
+    "Молодец! Ты выбрал(а) действие, решил(а) задачу и проверил(а) результат."
+  ].join("\n\n");
 }
 
 async function handlePhotoUpload(file) {
@@ -3696,7 +3826,7 @@ function getLanguageMessage() {
 }
 
 function checkQuizAnswer(button) {
-  if (!consumeGuestAction(1)) {
+  if (!consumeGuestAction()) {
     quizResult.textContent = "Можно продолжать без регистрации. Попробуй ещё раз или выбери другой вопрос.";
     return;
   }

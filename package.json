@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check script.js && node --check supabase-client.js && node --check official_textbooks.js && node --check scripts/content-audit.js && node --check scripts/textbook-catalog-audit.js && node --check scripts/textbook-module-check.js && node --check scripts/static-public-check.js && node --check scripts/mvp-auth-check.js && node --check scripts/child-first-check.js && node scripts/textbook-module-check.js",
+    "check": "node --check server.js && node --check script.js && node --check supabase-client.js && node --check official_textbooks.js && node --check scripts/content-audit.js && node --check scripts/textbook-catalog-audit.js && node --check scripts/textbook-module-check.js && node --check scripts/static-public-check.js && node --check scripts/mvp-auth-check.js && node --check scripts/child-first-check.js && node --check scripts/quality-regression-check.js && node scripts/textbook-module-check.js && node scripts/quality-regression-check.js",
     "content:report": "node scripts/content-audit.js report",
     "content:test": "node scripts/content-audit.js test",
     "textbooks:report": "node scripts/textbook-catalog-audit.js",
@@ -15,6 +15,7 @@
     "mvp:test": "node scripts/mvp-auth-check.js",
     "child-first:test": "node scripts/child-first-check.js",
     "responsive:test": "node scripts/responsive-ux-check.js",
+    "quality:test": "node scripts/quality-regression-check.js",
     "audit:post-supabase": "node scripts/post-supabase-audit.js"
   },
   "engines": {
