@@ -1129,6 +1129,8 @@ function updateKidFocus() {
   document.body.classList.toggle("kid-show-all", learning && kidShowAll);
   if (kidBar) kidBar.hidden = !learning;
   if (kidFocusBtn) kidFocusBtn.hidden = !kidShowAll;
+  const voiceSelect = document.getElementById("voiceGenderSelect");
+  if (voiceSelect && voiceSelect.value !== voiceGender) voiceSelect.value = voiceGender;
   // Кнопку фото показываем только когда подключено распознавание (ИИ на сервере).
   // Иначе ребёнок нажимает и получает «не умею» — это хуже, чем отсутствие кнопки.
   if (kidPhotoBtn) kidPhotoBtn.hidden = !isAiReady();
@@ -2541,6 +2543,11 @@ function bindEvents() {
   }
 
   speakBtn.addEventListener("click", speakLastAnswer);
+  document.getElementById("voiceGenderSelect")?.addEventListener("change", (event) => {
+    voiceGender = event.target.value === "male" ? "male" : "female";
+    try { localStorage.setItem("mamaAiVoice", voiceGender); } catch {}
+    speakText(voiceGender === "male" ? "Привет! Я буду читать ответы таким голосом." : "Привет! Я буду читать ответы таким голосом.");
+  });
   voiceBtn.addEventListener("click", startVoiceInput);
   micBtn?.addEventListener("click", startVoiceInput);
 
@@ -4757,6 +4764,7 @@ function splitSolution(text) {
 function renderMessageContent(div, text) {
   const [visible, hidden] = splitSolution(text);
   div.textContent = visible;
+  if (div.classList.contains("bot") && !div.classList.contains("typing") && visible.trim()) addSpeakButton(div);
   if (!hidden) return;
   const button = document.createElement("button");
   button.type = "button";
@@ -4768,6 +4776,7 @@ function renderMessageContent(div, text) {
     solution.textContent = hidden;
     button.replaceWith(solution);
     lastAnswerText = hidden;
+    addSpeakButton(solution);
   });
   div.appendChild(button);
 }
@@ -4806,32 +4815,126 @@ function replaceLastBotMessage(text) {
   chat.scrollTop = chat.scrollHeight;
 }
 
-function speakLastAnswer() {
+// ===== Озвучка ответов =====
+// С подключённым ИИ — живой голос Google (Gemini TTS). Если не получилось — голос браузера.
+let voiceGender = (() => { try { return localStorage.getItem("mamaAiVoice") || "female"; } catch { return "female"; } })();
+const ttsCache = new Map();
+let ttsAudio = null;
+let speakingButton = null;
+
+function cleanForSpeech(text) {
+  return String(text || "")
+    .replace(/\n*📚[^\n]*$/u, "")
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, "")
+    .replace(/\s+\n/g, "\n")
+    .trim()
+    .slice(0, 1500);
+}
+
+function stopSpeaking() {
+  if (ttsAudio) { ttsAudio.pause(); ttsAudio = null; }
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  if (speakingButton) { speakingButton.textContent = "🔊"; speakingButton.classList.remove("busy"); speakingButton = null; }
+  if (voiceStatus) voiceStatus.textContent = "";
+}
+
+function base64ToBlob(base64, mimeType) {
+  const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+  if (/wav/i.test(mimeType)) return new Blob([bytes], { type: "audio/wav" });
+  // Сырые PCM 16 бит → добавляем заголовок WAV.
+  const rate = Number((mimeType.match(/rate=(\d+)/) || [])[1]) || 24000;
+  const header = new DataView(new ArrayBuffer(44));
+  const writeText = (offset, value) => [...value].forEach((ch, i) => header.setUint8(offset + i, ch.charCodeAt(0)));
+  writeText(0, "RIFF"); header.setUint32(4, 36 + bytes.length, true); writeText(8, "WAVE");
+  writeText(12, "fmt "); header.setUint32(16, 16, true); header.setUint16(20, 1, true); header.setUint16(22, 1, true);
+  header.setUint32(24, rate, true); header.setUint32(28, rate * 2, true); header.setUint16(32, 2, true); header.setUint16(34, 16, true);
+  writeText(36, "data"); header.setUint32(40, bytes.length, true);
+  return new Blob([header.buffer, bytes], { type: "audio/wav" });
+}
+
+function speakWithBrowser(text, button) {
+  if (!("speechSynthesis" in window)) {
+    voiceStatus.textContent = currentLang === "kk" ? "Бұл браузерде дыбыстау жоқ" : currentLang === "en" ? "Text-to-speech is not available in this browser" : "В этом браузере озвучка недоступна";
+    stopSpeaking();
+    return;
+  }
+  const utterance = new SpeechSynthesisUtterance(text);
+  const lang = currentLang === "kk" ? "kk" : currentLang === "en" ? "en" : "ru";
+  utterance.lang = lang === "kk" ? "kk-KZ" : lang === "en" ? "en-US" : "ru-RU";
+  utterance.rate = 0.95;
+  // Выбираем самый естественный голос из доступных в браузере.
+  const voices = window.speechSynthesis.getVoices().filter((v) => v.lang?.toLowerCase().startsWith(lang));
+  const natural = voices.find((v) => /natural|online|neural|google/i.test(v.name)) || voices[0];
+  if (natural) utterance.voice = natural;
+  utterance.onend = () => stopSpeaking();
+  utterance.onerror = () => stopSpeaking();
+  window.speechSynthesis.speak(utterance);
+}
+
+async function speakText(text, button = null) {
   if (!soundEnabled) {
     voiceStatus.textContent = t("soundOff");
     return;
   }
-  if (!("speechSynthesis" in window)) {
-    voiceStatus.textContent = uiLang === "en" ? "Text-to-speech is not available in this browser yet" : uiLang === "kk" ? "Бұл браузерде мәтінді дыбыстау әзірге қолжетімсіз" : "Озвучивание пока недоступно в этом браузере";
+  // Повторное нажатие на ту же кнопку — остановить.
+  if (button && speakingButton === button) {
+    stopSpeaking();
     return;
   }
-  const text = (lastAnswerText || "Пока нет ответа для озвучивания").replace(/\s+/g, " ").slice(0, 1200);
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = currentLang === "kk" ? "kk-KZ" : currentLang === "en" ? "en-US" : "ru-RU";
-  utterance.rate = 0.92;
-  utterance.pitch = 1.08;
-  utterance.volume = 0.92;
-  const voices = window.speechSynthesis.getVoices();
-  const preferredVoice = voices.find((voice) => voice.lang && voice.lang.toLowerCase().startsWith(currentLang === "kk" ? "kk" : currentLang === "en" ? "en" : "ru"));
-  if (preferredVoice) utterance.voice = preferredVoice;
-  utterance.onstart = () => {
-    voiceStatus.textContent = t("speaking");
-  };
-  utterance.onend = () => {
-    voiceStatus.textContent = "";
-  };
-  window.speechSynthesis.speak(utterance);
+  stopSpeaking();
+  const clean = cleanForSpeech(text);
+  if (!clean) return;
+  speakingButton = button;
+  // Создаём проигрыватель сразу по нажатию — так телефоны разрешают звук.
+  const audio = new Audio();
+  ttsAudio = audio;
+  if (button) { button.textContent = "⏳"; button.classList.add("busy"); }
+  if (cloudAiReady) {
+    try {
+      const key = `${voiceGender}|${currentLang}|${clean}`;
+      let url = ttsCache.get(key);
+      if (!url) {
+        const response = await fetch(cloudAiUrl(), {
+          method: "POST",
+          headers: cloudAiHeaders(),
+          body: JSON.stringify({ tts: clean, voice: voiceGender, language: currentLang })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.audio) throw new Error(data.error || "tts");
+        url = URL.createObjectURL(base64ToBlob(data.audio, data.mimeType || "audio/wav"));
+        ttsCache.set(key, url);
+      }
+      if (ttsAudio !== audio) return; // пока грузили, нажали «стоп»
+      audio.src = url;
+      audio.onended = () => stopSpeaking();
+      if (button) button.textContent = "⏹";
+      await audio.play();
+      return;
+    } catch {
+      if (ttsAudio !== audio) return;
+      ttsAudio = null;
+    }
+  }
+  if (button) button.textContent = "⏹";
+  speakWithBrowser(clean, button);
+}
+
+function addSpeakButton(container) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "message-speak-btn";
+  button.textContent = "🔊";
+  button.setAttribute("aria-label", currentLang === "kk" ? "Дауыстап оқу" : currentLang === "en" ? "Read aloud" : "Прочитать вслух");
+  button.addEventListener("click", () => {
+    const own = container.classList.contains("message-solution") ? container : container.cloneNode(true);
+    if (own !== container) own.querySelectorAll("button, .message-solution").forEach((node) => node.remove());
+    speakText(own.textContent, button);
+  });
+  container.appendChild(button);
+}
+
+function speakLastAnswer() {
+  speakText(lastAnswerText || "");
 }
 
 // Голосовой ввод: ребёнок нажимает 🎤, говорит — текст сам отправляется в чат.

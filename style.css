@@ -2512,3 +2512,63 @@ body.kid-focus #voiceBtn { display: none; }
   .input-row button[type="submit"] { grid-column: 1 / -1; }
   .input-row .mic-btn { width: 56px; }
 }
+
+/* Кнопка 🔊 у каждого ответа */
+.message-speak-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin: 8px 0 0 auto;
+  float: right;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--soft);
+  font-size: 16px;
+  cursor: pointer;
+}
+.message-speak-btn.busy { background: #e8f0ff; border-color: var(--blue); }
+.message::after { content: ""; display: block; clear: both; }
+.voice-gender {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+.voice-gender select {
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  font-size: 16px;
+}
+.voice-gender { display: none; }
+body.kid-focus .voice-gender { display: flex; }
+
+/* Экран ребёнка на компьютере — компактно по центру, как приложение на телефоне */
+body.kid-focus .workspace {
+  max-width: 760px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+body.kid-focus .assistant-panel .message { font-size: 16px; }
+
+/* Телефон: чуть меньше отступы и шрифты, чтобы больше помещалось */
+@media (max-width: 480px) {
+  body.kid-focus .workspace { padding: 8px; gap: 10px; }
+  body.kid-focus .assistant-panel { padding: 12px 12px 72px; }
+  body.kid-focus .kid-bar { padding: 10px 12px; }
+  body.kid-focus .kid-bar-info strong { font-size: 16px; }
+  body.kid-focus .chat { padding: 10px; height: 56vh; }
+  body.kid-focus .message { max-width: 92%; font-size: 15px; padding: 10px 12px; }
+  body.kid-focus .big-action { min-height: 48px; font-size: 15px; }
+}
+body.kid-focus #speakBtn { display: none; }
+/* Размер для пальца ребёнка — не меньше 44 px */
+.message-speak-btn { width: 44px; height: 44px; font-size: 18px; }
+.voice-gender select { min-height: 44px; }
