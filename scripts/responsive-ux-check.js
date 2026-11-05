@@ -120,8 +120,9 @@ async function main() {
       if (mobileControls.hasSmallFormFont) {
         failures.push(`${viewport.width}: form text below 16px`);
       }
-      if (mobileControls.inputColumns !== 1) {
-        failures.push(`${viewport.width}: chat form is not single-column ${JSON.stringify(mobileControls)}`);
+      // На телефоне: поле ввода + кнопка 🎤 в одной строке, «Отправить» — на всю ширину ниже.
+      if (mobileControls.inputColumns !== 2) {
+        failures.push(`${viewport.width}: chat form should be input + mic ${JSON.stringify(mobileControls)}`);
       }
     }
 
