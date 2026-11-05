@@ -91,6 +91,7 @@ jobs:
         if: steps.secrets.outputs.ready == 'true'
         env:
           EXTRA_QUESTION: ${{ inputs.question }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           EXTRA_GRADE: ${{ inputs.grade || '5' }}
           EXTRA_SUBJECT: ${{ inputs.subject || 'Общий' }}
         run: |
@@ -108,8 +109,15 @@ jobs:
           if [ "$EXTRA_QUESTION" = "TTS" ]; then
             for v in female male; do
               echo "== TTS $v"
-              curl -sS -X POST "$URL" -H "Content-Type: application/json" -d "{\"tts\":\"Привет! Давай решим пример: двенадцать плюс семь.\",\"voice\":\"$v\",\"language\":\"ru\"}" \
-                | jq -c '{model, mimeType, audioLength: (.audio // "" | length), error, details}'
+              curl -sS -X POST "$URL" -H "Content-Type: application/json" -d "{\"tts\":\"Привет! Давай решим пример: двенадцать плюс семь.\",\"voice\":\"$v\",\"language\":\"ru\"}" > tts.json
+              jq -c '{model, mimeType, audioLength: (.audio // "" | length), error, details}' tts.json
+              # Проверка: распознаём записанный голос обратно в текст — читается ли только нужный текст.
+              jq -n --rawfile a <(jq -r .audio tts.json) --arg m "$(jq -r .mimeType tts.json)" \
+                '{contents:[{role:"user",parts:[{text:"Дословно запиши, что говорится в этой аудиозаписи. Только текст."},{inline_data:{mime_type:$m,data:($a|rtrimstr("\n"))}}]}]}' > stt.json
+              curl -sS "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent" \
+                -H "x-goog-api-key: $GEMINI_API_KEY" -H "Content-Type: application/json" -d @stt.json \
+                | jq -r '"STT: " + (.candidates[0].content.parts[0].text // (.error.message // "-"))'
+              sleep 5
             done
             exit 0
           fi
