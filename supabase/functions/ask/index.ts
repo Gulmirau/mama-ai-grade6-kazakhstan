@@ -7,8 +7,10 @@
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
 // Модели по порядку: если первая недоступна, пробуем следующую.
-// Сначала быстрая модель (стабильно работает на бесплатном тарифе), потом запасная.
-const MODELS = (Deno.env.get("GEMINI_MODELS") ?? "gemini-flash-lite-latest,gemini-flash-latest")
+// Несколько моделей: у каждой свой лимит и своя загрузка на бесплатном тарифе.
+// Если одна перегружена (503) или упёрлась в лимит (429), отвечает следующая.
+const MODELS = (Deno.env.get("GEMINI_MODELS") ??
+  "gemini-flash-lite-latest,gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-2.5-flash-lite,gemini-3.5-flash,gemini-flash-latest")
   .split(",").map((m) => m.trim()).filter(Boolean);
 // Поиск Google повышает достоверность фактов, но на бесплатном тарифе он быстро
 // упирается в лимит. Поэтому по умолчанию выключен; включить: GEMINI_USE_SEARCH=true.
@@ -211,7 +213,7 @@ Deno.serve(async (req) => {
           result = await callGemini(model, contents, useSearch);
         } catch (error) {
           const status = (error as { status?: number }).status ?? 0;
-          if (status !== 503 && status !== 500) throw error;
+          if ((status !== 503 && status !== 500) || model !== MODELS[0]) throw error;
           // Модель перегружена — подождём и попробуем ещё раз.
           await new Promise((resolve) => setTimeout(resolve, 1500));
           result = await callGemini(model, contents, useSearch);
@@ -234,6 +236,9 @@ Deno.serve(async (req) => {
     }
   }
   console.error(errors.join(" | "));
-  const limited = errors.some((e) => / 429 /.test(e));
-  return json({ error: limited ? "quota" : "ai_failed", details: errors }, limited ? 429 : 502, origin);
+  // Если хоть одна модель была просто перегружена — это временно («busy»), а не лимит.
+  const busy = errors.some((e) => / (503|500|504) /.test(e));
+  const limited = !busy && errors.some((e) => / 429 /.test(e));
+  const code = busy ? "busy" : limited ? "quota" : "ai_failed";
+  return json({ error: code, details: errors }, busy ? 503 : limited ? 429 : 502, origin);
 });
