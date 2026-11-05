@@ -71,6 +71,14 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: supabase functions deploy ask --project-ref "$PROJECT_REF" --no-verify-jwt --yes
 
+      - name: List available Gemini models
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          curl -sS "https://generativelanguage.googleapis.com/v1beta/models?pageSize=200" -H "x-goog-api-key: $GEMINI_API_KEY" \
+            | jq -r '.models[] | select(.supportedGenerationMethods | index("generateContent")) | .name' | grep -i flash || true
+
       - name: Test questions
         if: steps.secrets.outputs.ready == 'true'
         env:
@@ -85,7 +93,7 @@ jobs:
               '{question:$q, grade:$g, subjectTitle:$s, language:$l, mode:$m, history:[]}')
             curl -sS -X POST "$URL" -H "Content-Type: application/json" -H "Origin: https://gulmirau.github.io" -d "$body" \
               | jq -r '"[model: \(.model // "-") search: \(.search // "-")]\n\(.answer // .)\n\(if .sources then "SOURCES: " + ([.sources[].title] | join(", ")) else "" end)"'
-            sleep 4
+            sleep 8
           }
           ask "обисни смысл басни лиса и варона" 3 "Литературное чтение" ru
           ask "Кто такие Керей и Жанибек и что они основали?" 6 "История Казахстана" ru
