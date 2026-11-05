@@ -2483,3 +2483,32 @@ body.kid-focus .assistant-panel { padding-bottom: 72px; }
 .help-how-steps { display: grid; gap: 10px; margin: 12px 0 16px; }
 .help-how-steps .how-step { padding: 14px; }
 .how-step > span:last-child { font-weight: 500; }
+
+/* Кнопка микрофона в строке ввода */
+.input-row .mic-btn {
+  flex-shrink: 0;
+  min-width: 52px;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--soft);
+  font-size: 22px;
+  cursor: pointer;
+}
+.input-row .mic-btn.listening {
+  background: #ffe1e1;
+  border-color: var(--coral);
+  animation: micPulse 1s ease-in-out infinite;
+}
+@keyframes micPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(236, 106, 91, 0.45); }
+  50% { box-shadow: 0 0 0 8px rgba(236, 106, 91, 0); }
+}
+body.reduced-motion .input-row .mic-btn.listening { animation: none; }
+body.kid-focus #voiceBtn { display: none; }
+.input-row { grid-template-columns: minmax(0, 1fr) auto auto; }
+@media (max-width: 760px) {
+  .input-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .input-row button[type="submit"] { grid-column: 1 / -1; }
+  .input-row .mic-btn { width: 56px; }
+}

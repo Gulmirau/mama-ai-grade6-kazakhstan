@@ -922,6 +922,7 @@ const currentDateText = document.getElementById("currentDateText");
 const currentTimeText = document.getElementById("currentTimeText");
 const speakBtn = document.getElementById("speakBtn");
 const voiceBtn = document.getElementById("voiceBtn");
+const micBtn = document.getElementById("micBtn");
 const notUnderstoodBtn = document.getElementById("notUnderstoodBtn");
 const explainAgainOptions = document.getElementById("explainAgainOptions");
 const photoActionChoices = document.getElementById("photoActionChoices");
@@ -1294,7 +1295,7 @@ function finishGuestWizard(action) {
     userInput.placeholder = `Напиши тему для подготовки к ${modeName}`;
     addMessage("bot success", `Подготовим тебя к ${modeName}: сначала разберём тему, потом потренируемся на похожих заданиях.`);
   } else {
-    userInput.placeholder = "Напиши задание или вопрос сюда";
+    userInput.placeholder = "Напиши вопрос или нажми 🎤";
   }
   window.setTimeout(() => userInput?.focus(), 350);
 }
@@ -2515,6 +2516,7 @@ function bindEvents() {
 
   speakBtn.addEventListener("click", speakLastAnswer);
   voiceBtn.addEventListener("click", startVoiceInput);
+  micBtn?.addEventListener("click", startVoiceInput);
 
   gradeSelect.addEventListener("change", () => {
     currentGrade = Number(gradeSelect.value);
@@ -3723,9 +3725,22 @@ function makeAnswer(text) {
   });
 }
 
+// Голосом дети говорят словами: «12 плюс 7», «20 процентов от 150», «3 четвёртых».
+// Переводим самые частые слова в знаки, чтобы проверка примеров работала и с голоса.
+function normalizeSpokenMath(text) {
+  return String(text || "")
+    .replace(/(\d)\s*(плюс|прибавить|қосу|қос|plus)\s*(\d)/g, "$1 + $3")
+    .replace(/(\d)\s*(минус|отнять|вычесть|алу|алып таста|minus)\s*(\d)/g, "$1 - $3")
+    .replace(/(\d)\s*(умножить на|умножь на|умножить|көбейту|көбейт|times|multiplied by)\s*(\d)/g, "$1 * $3")
+    .replace(/(\d)\s*(разделить на|раздели на|делить на|поделить на|бөлу|бөл|divided by)\s*(\d)/g, "$1 / $3")
+    .replace(/(\d)\s*(процентов|процента|процент|пайыз|percent)\s*/g, "$1% ")
+    .replace(/(\d)\s*(равно|тең|equals)\s*(\d)/g, "$1 = $3")
+    .replace(/(сколько будет|сколько|посчитай|реши|қанша|how much is|what is)\s*/g, "");
+}
+
 function makeVerifiedArithmeticResponse(text, subject, language = "ru") {
   if (!["math", "algebra", "calculus"].includes(subject.key)) return null;
-  const normalized = String(text || "").replace(/,/g, ".").toLowerCase();
+  const normalized = normalizeSpokenMath(String(text || "").replace(/,/g, ".").toLowerCase());
   const advancedResponse = makeVerifiedFractionResponse(normalized, language)
     || makeVerifiedPercentResponse(normalized, language)
     || makeVerifiedLinearEquationResponse(normalized, language);
@@ -3821,10 +3836,10 @@ function makeVerifiedArithmeticResponse(text, subject, language = "ru") {
 
 function makeVerifiedMathTutorResponse(language, details) {
   const labels = language === "kk"
-    ? { hint: "Кеңес", tryIt: "Өзің шешіп көр: жауабыңды чатқа жаз — мен тексеремін. Қиын болса, «Шешімін көрсету» батырмасын бас.", steps: "Шешуі", answer: "Жауап", check: "Тексеру", similar: "Ұқсас тапсырма" }
+    ? { hint: "Кеңес", tryIt: "Өзің шешіп көр: жауабыңды жаз немесе 🎤 арқылы айт — мен тексеремін. Қиын болса, «Шешімін көрсету» батырмасын бас.", steps: "Шешуі", answer: "Жауап", check: "Тексеру", similar: "Ұқсас тапсырма" }
     : language === "en"
-      ? { hint: "Hint", tryIt: "Try it yourself: type your answer in the chat and I will check it. If it is hard, tap “Show solution”.", steps: "Solution", answer: "Answer", check: "Check", similar: "Similar task" }
-      : { hint: "Подсказка", tryIt: "Попробуй сам(а): напиши ответ в чат — я проверю. Если трудно, нажми «Показать решение».", steps: "Решение", answer: "Ответ", check: "Проверка", similar: "Похожее задание" };
+      ? { hint: "Hint", tryIt: "Try it yourself: type your answer or say it with 🎤 and I will check it. If it is hard, tap “Show solution”.", steps: "Solution", answer: "Answer", check: "Check", similar: "Similar task" }
+      : { hint: "Подсказка", tryIt: "Попробуй сам(а): напиши ответ или скажи его через 🎤 — я проверю. Если трудно, нажми «Показать решение».", steps: "Решение", answer: "Ответ", check: "Проверка", similar: "Похожее задание" };
   pendingTutorCheck = { answer: details.answer, hint: details.hint, language, solution: null };
   const visible = [
     details.condition,
@@ -4592,30 +4607,61 @@ function speakLastAnswer() {
   window.speechSynthesis.speak(utterance);
 }
 
+// Голосовой ввод: ребёнок нажимает 🎤, говорит — текст сам отправляется в чат.
+// Повторное нажатие во время записи останавливает её.
+let voiceListening = false;
+
+function setVoiceListening(value) {
+  voiceListening = value;
+  micBtn?.classList.toggle("listening", value);
+  if (micBtn) micBtn.setAttribute("aria-pressed", value ? "true" : "false");
+}
+
 function startVoiceInput() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    voiceStatus.textContent = t("voiceUnavailable");
+    voiceStatus.textContent = currentLang === "kk"
+      ? "Бұл браузерде дауыспен жазу жұмыс істемейді. Сайтты Chrome-да аш."
+      : currentLang === "en"
+        ? "Voice input does not work in this browser. Open the site in Chrome."
+        : "В этом браузере голосовой ввод не работает. Открой сайт в Chrome.";
     return;
   }
 
-  if (recognition) recognition.stop();
+  if (voiceListening && recognition) {
+    recognition.stop();
+    return;
+  }
+  if (recognition) recognition.abort?.();
   recognition = new SpeechRecognition();
   recognition.lang = currentLang === "kk" ? "kk-KZ" : currentLang === "en" ? "en-US" : "ru-RU";
-  recognition.interimResults = false;
+  recognition.interimResults = true;
+  recognition.continuous = false;
   recognition.maxAlternatives = 1;
+  let finalText = "";
   recognition.onstart = () => {
-    voiceStatus.textContent = uiLang === "en" ? "Listening... say your question" : uiLang === "kk" ? "Тыңдап тұрмын... сұрағыңды айт" : "Слушаю... скажи вопрос голосом";
+    setVoiceListening(true);
+    voiceStatus.textContent = currentLang === "en" ? "🎤 Listening... say your question" : currentLang === "kk" ? "🎤 Тыңдап тұрмын... сұрағыңды айт" : "🎤 Слушаю... скажи вопрос";
   };
   recognition.onresult = (event) => {
-    userInput.value = event.results[0][0].transcript;
-    voiceStatus.textContent = uiLang === "en" ? "Done, I wrote down the question" : uiLang === "kk" ? "Дайын, сұрақ жазылды" : "Готово, я записала вопрос";
+    const text = Array.from(event.results).map((result) => result[0].transcript).join(" ").trim();
+    userInput.value = text;
+    if (event.results[event.results.length - 1].isFinal) finalText = text;
   };
-  recognition.onerror = () => {
-    voiceStatus.textContent = uiLang === "en" ? "I could not recognize speech. Try again" : uiLang === "kk" ? "Дауысты тану мүмкін болмады. Қайталап көр" : "Не получилось распознать речь. Попробуй еще раз";
+  recognition.onerror = (event) => {
+    setVoiceListening(false);
+    const denied = event?.error === "not-allowed" || event?.error === "service-not-allowed";
+    voiceStatus.textContent = denied
+      ? (currentLang === "kk" ? "Микрофонға рұқсат бер: браузер сұрағанда «Рұқсат ету» бас." : currentLang === "en" ? "Please allow the microphone when the browser asks." : "Разреши микрофон: когда браузер спросит, нажми «Разрешить».")
+      : (currentLang === "kk" ? "Естілмеді. 🎤 басып, қайта айтып көр." : currentLang === "en" ? "I did not catch that. Tap 🎤 and try again." : "Не расслышала. Нажми 🎤 и скажи ещё раз.");
   };
   recognition.onend = () => {
-    if (voiceStatus.textContent.includes("Слушаю") || voiceStatus.textContent.includes("Listening") || voiceStatus.textContent.includes("Тыңдап")) {
+    setVoiceListening(false);
+    const text = (finalText || userInput.value || "").trim();
+    if (text) {
+      voiceStatus.textContent = "";
+      sendMessage();
+    } else if (/Слушаю|Listening|Тыңдап/.test(voiceStatus.textContent)) {
       voiceStatus.textContent = "";
     }
   };
