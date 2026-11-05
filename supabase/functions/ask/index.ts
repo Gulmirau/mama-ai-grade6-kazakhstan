@@ -195,11 +195,8 @@ async function keyWorks(): Promise<boolean> {
 
 // Озвучка: текст → аудио PCM 24 кГц (сайт сам превращает его в WAV и проигрывает).
 async function speak(text: string, voice: string, language: string) {
-  const style = language === "kk"
-    ? "Мына мәтінді балаға арнап, сабырлы да мейірімді мұғалім сияқты, баяу әрі анық оқы:"
-    : language === "en"
-      ? "Read this to a child slowly and clearly, in a calm, kind teacher's voice:"
-      : "Прочитай это ребёнку спокойно, доброжелательно и неторопливо, как добрая учительница:";
+  // Только сам текст: облегчённая модель голоса зачитывает вслух любые служебные указания.
+  void language;
   const errors: string[] = [];
   for (const model of TTS_MODELS) {
     const controller = new AbortController();
@@ -210,7 +207,7 @@ async function speak(text: string, voice: string, language: string) {
         headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
         signal: controller.signal,
         body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: `${style}\n\n${text}` }] }],
+          contents: [{ role: "user", parts: [{ text }] }],
           generationConfig: {
             responseModalities: ["AUDIO"],
             speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOICES[voice] ?? VOICES.female } } },
