@@ -1,0 +1,20 @@
+name: Keep Supabase awake
+
+# Бесплатный проект Supabase засыпает, если им неделю никто не пользуется.
+# Каждые 3 дня делаем маленький запрос к базе и к функции ИИ, чтобы проект не останавливался.
+
+on:
+  schedule:
+    - cron: "17 3 */3 * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping database and AI function
+        run: |
+          URL="https://xkuotzwxvpmtihabszto.supabase.co"
+          KEY="sb_publishable_v-qTBamJT-Uw3XC-eCY74Q_qVn7D9zd"
+          curl -sS -o /dev/null -w "database: %{http_code}\n" "$URL/rest/v1/textbook_catalog?select=id&limit=1" -H "apikey: $KEY"
+          curl -sS -w "\n" "$URL/functions/v1/ask"
