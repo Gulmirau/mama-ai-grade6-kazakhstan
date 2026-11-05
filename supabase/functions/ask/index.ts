@@ -18,6 +18,14 @@ const USE_SEARCH = (Deno.env.get("GEMINI_USE_SEARCH") ?? "false") === "true";
 const ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") ?? "https://gulmirau.github.io,http://localhost:8766,http://localhost:3000")
   .split(",").map((o) => o.trim());
 
+// Модели живого голоса (озвучка ответов). Пробуем по очереди.
+const TTS_MODELS = (Deno.env.get("GEMINI_TTS_MODELS") ??
+  "gemini-3.8-flash-lite-tts,gemini-3.8-flash-tts,gemini-3.1-flash-tts-preview,gemini-2.5-flash-preview-tts")
+  .split(",").map((m) => m.trim()).filter(Boolean);
+// Голоса Gemini: тёплый женский и дружелюбный мужской.
+const VOICES: Record<string, string> = { female: "Sulafat", male: "Achird" };
+const MAX_TTS_TEXT = 1500;
+
 const MAX_QUESTION = 2000;
 const MAX_HISTORY = 8;
 const MAX_IMAGE_BASE64 = 6_000_000; // ~4.5 МБ фото
@@ -38,6 +46,8 @@ const SYSTEM_PROMPT = `Ты — Mama AI, терпеливый репетитор
 
 КАК УЧИТЬ:
 - Пиши коротко и просто, под возраст (поле grade).
+
+РЕШЕНИЕ ПО ОБРАЗЦУ (для любого класса, важнее остальных правил): если ребёнок просит «реши пример А и объясни, а Б я сам» или «покажи, как решать, дальше я сам» — реши первый пример ПОЛНОСТЬЮ: по шагам, каждый шаг объясни простыми словами, дай ответ. Здесь НЕ прячь решение за 🔒 и не задавай наводящих вопросов. Затем скажи: «Теперь реши пример Б так же, по этим шагам, и пришли мне ответ — я проверю». Второй пример сам не решай. Когда ребёнок пришлёт решение — проверь его по шагам.
 
 1–4 КЛАСС (поле grade от 1 до 4) — особые правила, они важнее правил ниже:
 - Ребёнок маленький, сложные наводящие вопросы ему непонятны. НЕ спрашивай «как бы ты объяснил», «почему ты так думаешь», «что тебе уже понятно».
@@ -183,6 +193,49 @@ async function keyWorks(): Promise<boolean> {
   return keyCheck.ok;
 }
 
+// Озвучка: текст → аудио PCM 24 кГц (сайт сам превращает его в WAV и проигрывает).
+async function speak(text: string, voice: string, language: string) {
+  const style = language === "kk"
+    ? "Мына мәтінді балаға арнап, сабырлы да мейірімді мұғалім сияқты, баяу әрі анық оқы:"
+    : language === "en"
+      ? "Read this to a child slowly and clearly, in a calm, kind teacher's voice:"
+      : "Прочитай это ребёнку спокойно, доброжелательно и неторопливо, как добрая учительница:";
+  const errors: string[] = [];
+  for (const model of TTS_MODELS) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30_000);
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
+        signal: controller.signal,
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: `${style}\n\n${text}` }] }],
+          generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOICES[voice] ?? VOICES.female } } },
+          },
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        errors.push(`${model}: ${response.status} ${String(data?.error?.message ?? "").slice(0, 120)}`);
+        continue;
+      }
+      const part = (data?.candidates?.[0]?.content?.parts ?? []).find((p: { inlineData?: unknown }) => p.inlineData);
+      if (part?.inlineData?.data) {
+        return { audio: part.inlineData.data as string, mimeType: String(part.inlineData.mimeType ?? "audio/L16;rate=24000"), model };
+      }
+      errors.push(`${model}: no audio`);
+    } catch {
+      errors.push(`${model}: timeout`);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw Object.assign(new Error(errors.join(" | ")), { details: errors });
+}
+
 function json(body: unknown, status: number, origin: string | null) {
   return new Response(JSON.stringify(body), {
     status,
@@ -206,6 +259,18 @@ Deno.serve(async (req) => {
   } catch {
     return json({ error: "bad_json" }, 400, origin);
   }
+  if (typeof body.tts === "string") {
+    const text = clean(body.tts, MAX_TTS_TEXT).trim();
+    if (!text) return json({ error: "empty_text" }, 400, origin);
+    try {
+      const language = ["ru", "kk", "en"].includes(String(body.language)) ? String(body.language) : "ru";
+      return json(await speak(text, String(body.voice ?? "female"), language), 200, origin);
+    } catch (error) {
+      console.error(String((error as Error).message));
+      return json({ error: "tts_failed", details: (error as { details?: string[] }).details ?? [] }, 502, origin);
+    }
+  }
+
   const imageSize = String((body.image as { data?: string } | undefined)?.data ?? "").length;
   if (imageSize > MAX_IMAGE_BASE64) return json({ error: "image_too_large" }, 413, origin);
   if (!clean(body.question, MAX_QUESTION).trim() && !imageSize) return json({ error: "empty_question" }, 400, origin);

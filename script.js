@@ -3720,7 +3720,8 @@ async function askCloudAi({ question, image = null, history = chatHistory }, ret
     error.code = data.error;
     throw error;
   }
-  let answer = String(data.answer).replace(/\*\*/g, "").replace(/^#+\s*/gm, "");
+  // Убираем разметку markdown (**жирный**, *курсив*, # заголовки) — в чате она видна как звёздочки.
+  let answer = String(data.answer).replace(/\*\*/g, "").replace(/\*(\S(?:[^*\n]*\S)?)\*/g, "$1").replace(/^#+\s*/gm, "");
   const sources = (data.sources || []).map((item) => item.title).filter(Boolean);
   if (sources.length) answer += `\n\n📚 ${currentLang === "kk" ? "Дереккөздер" : currentLang === "en" ? "Sources" : "Источники"}: ${[...new Set(sources)].join(", ")}`;
   return answer;
