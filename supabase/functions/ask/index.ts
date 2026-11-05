@@ -7,7 +7,8 @@
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
 // Модели по порядку: если первая недоступна, пробуем следующую.
-const MODELS = (Deno.env.get("GEMINI_MODELS") ?? "gemini-flash-latest,gemini-3.8-flash,gemini-flash-lite-latest")
+// Сначала быстрая модель (стабильно работает на бесплатном тарифе), потом запасная.
+const MODELS = (Deno.env.get("GEMINI_MODELS") ?? "gemini-flash-lite-latest,gemini-flash-latest")
   .split(",").map((m) => m.trim()).filter(Boolean);
 // Поиск Google повышает достоверность фактов, но на бесплатном тарифе он быстро
 // упирается в лимит. Поэтому по умолчанию выключен; включить: GEMINI_USE_SEARCH=true.
@@ -112,11 +113,22 @@ async function callGemini(model: string, contents: unknown, useSearch: boolean) 
     ],
   };
   if (useSearch) payload.tools = [{ google_search: {} }];
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
-    body: JSON.stringify(payload),
-  });
+  // Не ждём одну попытку дольше 25 секунд, чтобы уложиться в лимиты бесплатного Supabase.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25_000);
+  let response: Response;
+  try {
+    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+  } catch {
+    throw Object.assign(new Error("timeout"), { status: 504 });
+  } finally {
+    clearTimeout(timer);
+  }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     const message = data?.error?.message ?? `HTTP ${response.status}`;
@@ -187,8 +199,12 @@ Deno.serve(async (req) => {
 
   const contents = buildContents(body);
   const errors: string[] = [];
+  const startedAt = Date.now();
+  attempts:
   for (const model of MODELS) {
     for (const useSearch of USE_SEARCH ? [true, false] : [false]) {
+      // Общий бюджет времени на один вопрос — 40 секунд.
+      if (Date.now() - startedAt > 40_000) break attempts;
       try {
         let result;
         try {
