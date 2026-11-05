@@ -3689,7 +3689,7 @@ function cloudAiErrorText(code) {
   return dict[code] || dict.default;
 }
 
-async function askCloudAi({ question, image = null, history = chatHistory }) {
+async function askCloudAi({ question, image = null, history = chatHistory }, retry = true) {
   const subject = currentSubject();
   const response = await fetch(cloudAiUrl(), {
     method: "POST",
@@ -3707,8 +3707,13 @@ async function askCloudAi({ question, image = null, history = chatHistory }) {
     })
   });
   const data = await response.json().catch(() => ({}));
+  // Временный сбой сервера — один раз тихо повторяем запрос.
+  if (retry && response.status >= 500 && data.error !== "bad_key" && data.error !== "ai_not_configured") {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    return askCloudAi({ question, image, history }, false);
+  }
   if (!response.ok || !data.answer) {
-    const error = new Error(data.error || `HTTP ${response.status}`);
+    const error = new Error(data.error || data.code || `HTTP ${response.status}`);
     error.code = data.error;
     throw error;
   }
@@ -3794,7 +3799,8 @@ async function sendMessage() {
     } catch (error) {
       // Временные ограничения — честно говорим ребёнку. Поломка ключа/сервиса —
       // выключаем ИИ и отвечаем как раньше, без ИИ.
-      if (["quota", "too_many_requests", "blocked"].includes(error.code)) {
+      if (!["bad_key", "ai_not_configured"].includes(error.code)) {
+        // Временная проблема: ИИ не выключаем, просим повторить.
         replaceLastBotMessage(cloudAiErrorText(error.code));
       } else {
         cloudAiReady = false;
