@@ -87,12 +87,23 @@
             </div>
           </div>
         </div>
-        <div class="landing-demo" aria-hidden="true">
-          <div class="demo-card">1. Класс</div>
-          <div class="demo-card">2. Предмет</div>
-          <div class="demo-card">3. Вопрос</div>
-          <div class="demo-card reward">Понятное объяснение</div>
-        </div>
+        <ol class="landing-demo how-steps" aria-label="Как пользоваться: 3 шага">
+          <li class="demo-card how-step">
+            <span class="how-pic" aria-hidden="true">🎒</span>
+            <strong>1. Выбери класс и предмет</strong>
+            <span>Нажми «Я ученик» и выбери свой класс.</span>
+          </li>
+          <li class="demo-card how-step">
+            <span class="how-pic" aria-hidden="true">✍️</span>
+            <strong>2. Напиши задание</strong>
+            <span>Например: 3/4 + 1/8 или 12 − 5.</span>
+          </li>
+          <li class="demo-card how-step reward">
+            <span class="how-pic" aria-hidden="true">💡</span>
+            <strong>3. Решай с подсказкой</strong>
+            <span>Напиши свой ответ — Mama AI проверит.</span>
+          </li>
+        </ol>
       </section>
 
       <section class="guest-status-panel" id="guestStatusPanel" hidden>
@@ -102,7 +113,7 @@
 
       <section class="guest-wizard" id="guestWizard" hidden>
         <div class="wizard-card">
-          <span class="pill" id="guestStepPill">Шаг 1 из 3</span>
+          <span class="pill" id="guestStepPill">Шаг 1 из 2</span>
           <h2 id="guestWizardTitle">В каком ты классе?</h2>
           <p id="guestWizardHint">Выбери класс, и я покажу только нужные предметы.</p>
           <div class="grade-choice-grid" id="guestGradeChoices"></div>
@@ -152,7 +163,7 @@
       <div class="video-modal" id="videoModal" hidden>
         <div class="video-card" role="dialog" aria-modal="true" aria-labelledby="videoTitle">
           <button class="close-btn" id="closeVideoBtn" type="button" aria-label="Закрыть">×</button>
-          <h2 id="videoTitle">Как работает Mama Ai</h2>
+          <h2 id="videoTitle">Как пользоваться Mama AI</h2>
           <div class="guide-slides" id="guideSlides" aria-live="polite"></div>
           <div class="guide-controls">
             <button class="ghost-btn" id="guidePrevBtn" type="button">Назад</button>
@@ -160,14 +171,7 @@
             <button class="ghost-btn" id="guidedTourBtn" type="button">Показать с голосом и стрелками</button>
             <button class="primary-btn" id="guideTryBtn" type="button">Попробовать сейчас</button>
           </div>
-          <ol class="text-guide">
-            <li>Нажми «Учиться без регистрации».</li>
-            <li>Выбери класс, язык и предмет.</li>
-            <li>Задай вопрос или выбери задание.</li>
-            <li>Получи понятное объяснение.</li>
-            <li>Выполни задание и заработай баллы.</li>
-            <li>Попроси родителя создать профиль, чтобы сохранить прогресс.</li>
-          </ol>
+          <p class="text-guide">Для родителей: кабинет нужен, только если хотите сохранять прогресс ребёнка на разных устройствах.</p>
         </div>
       </div>
 
@@ -502,6 +506,15 @@
         </div>
       </section>
 
+      <section class="kid-bar" id="kidBar" hidden>
+        <div class="kid-bar-info">
+          <span class="kid-bar-label">Сейчас учим</span>
+          <strong id="kidBarTitle">5 класс · Математика</strong>
+        </div>
+        <button class="ghost-btn" id="kidFocusBtn" type="button" hidden>← Только чат</button>
+        <button class="ghost-btn" id="kidChangeBtn" type="button">Сменить</button>
+      </section>
+
       <section class="learning-layout">
         <div class="assistant-panel" id="assistant">
           <div class="panel-heading">
@@ -554,6 +567,10 @@
             <button type="submit" data-i18n="send">Отправить</button>
           </form>
           <p class="voice-status" id="voiceStatus" aria-live="polite"></p>
+          <div class="kid-actions">
+            <button class="primary-btn big-action" id="kidPhotoBtn" type="button">📷 Сфотографировать задание</button>
+            <button class="link-button" id="kidMoreBtn" type="button">Ещё: учебники, тесты, план</button>
+          </div>
         </div>
 
         <div class="side-stack">
@@ -757,23 +774,17 @@
       <h2>Как пользоваться Mama AI</h2>
       <button class="close-btn" id="closeHelpBtn" type="button" aria-label="Закрыть">×</button>
     </div>
-    <div class="video-instruction">
+    <ol class="how-steps help-how-steps" id="helpHowSteps"></ol>
+    <button class="ghost-btn" id="helpTourBtn" type="button">Показать прямо на сайте</button>
+    <p class="text-guide">Для родителей: кабинет нужен, только если хотите сохранять прогресс ребёнка на разных устройствах.</p>
+    <!-- Видеоинструкция появится, когда будет готов файл: вставьте src и уберите hidden. -->
+    <div class="video-instruction" hidden>
       <strong>Видео: Как начать работать с Mama AI</strong>
       <video id="guideVideo" controls preload="metadata" poster="" aria-label="Видеоинструкция Mama AI">
         <source id="guideVideoMp4" src="" type="video/mp4" />
         <source id="guideVideoWebm" src="" type="video/webm" />
       </video>
-      <span>Видео будет добавлено позже. Когда файл будет готов, сюда можно вставить MP4, WebM или ссылку.</span>
     </div>
-    <button class="primary-btn" id="helpShortGuideBtn" type="button">▶ Посмотреть короткую инструкцию</button>
-    <button class="ghost-btn" id="helpTourBtn" type="button">Показать прямо на сайте</button>
-    <ol class="text-guide">
-      <li>Нажмите «Учиться без регистрации».</li>
-      <li>Выберите класс.</li>
-      <li>Выберите предмет.</li>
-      <li>Сфотографируйте задание или напишите вопрос.</li>
-      <li>Чтобы сохранить прогресс, родитель создаёт профиль ребёнка.</li>
-    </ol>
   </aside>
   <div class="confetti-layer" id="confettiLayer" aria-hidden="true"></div>
 

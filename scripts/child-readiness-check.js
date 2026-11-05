@@ -25,8 +25,10 @@ async function main() {
   await page.click("#guestStartBtn");
   await page.click("#guestGradeChoices button[data-grade='6']");
   await page.click("#guestSubjectChoices button[data-subject='math']");
-  await page.click("#actionQuestionBtn");
   await page.waitForSelector("#assistant");
+  assert(await page.evaluate(() => document.body.classList.contains("kid-focus")), "after choosing a subject the child sees the simple screen");
+  assert(await page.locator("#textbookCatalog").isHidden(), "textbook catalog is hidden on the simple child screen");
+  assert(await page.locator("#userInput").isVisible(), "chat input is visible on the simple child screen");
 
   const context = await page.evaluate(() => ({
     learningGrade: document.querySelector("#gradeSelect")?.value,
@@ -41,13 +43,36 @@ async function main() {
     fraction: makeAnswer("3/4 - 1/4"),
     percent: makeAnswer("20% от 150"),
     equation: makeAnswer("2x + 3 = 11"),
-    unsafeChain: makeAnswer("2 + 3 * 4")
+    unsafeChain: makeAnswer("2 + 3 * 4"),
+    unknown: makeAnswer("Кто главный герой рассказа Каштанка?")
   }));
   assert(answers.fraction.includes("Ответ: 1/2"), "fraction answer is exact and reduced");
   assert(answers.fraction.includes("Проверка:"), "fraction answer includes a check");
   assert(answers.percent.includes("Ответ: 30"), "percentage answer is exact");
   assert(answers.equation.includes("Ответ: x = 4"), "linear equation answer is exact");
   assert(!answers.unsafeChain.includes("Ответ: 5."), "multi-operation expression is not answered with a partial calculation");
+  assert(!answers.unknown.includes("Диагностика"), "unsupported question gets a short child-friendly reply");
+  assert(answers.unknown.length < 600, "unsupported question reply is short");
+
+  // Ребёнок пробует ответить сам: помощник проверяет ответ.
+  await page.fill("#userInput", "3/4 + 1/8");
+  await page.click("#chatForm button[type='submit']");
+  await page.waitForSelector(".show-solution-btn");
+  assert(!(await page.locator("#chat").innerText()).includes("Ответ: 7/8"), "solution is hidden until the child asks for it");
+  await page.fill("#userInput", "5/8");
+  await page.click("#chatForm button[type='submit']");
+  await page.waitForFunction(() => document.querySelector("#chat").innerText.includes("Пока не так"));
+  await page.fill("#userInput", "7/8");
+  await page.click("#chatForm button[type='submit']");
+  await page.waitForFunction(() => document.querySelector("#chat").innerText.includes("Верно!"));
+  assert(true, "child's wrong and right answers are checked");
+  await page.locator(".show-solution-btn").last().click();
+  assert((await page.locator("#chat").innerText()).includes("Ответ: 7/8"), "solution opens on button press");
+
+  await page.click("#kidMoreBtn");
+  assert(await page.locator("#textbookCatalog").isVisible(), "«Ещё» shows textbooks and tests");
+  await page.click("#kidFocusBtn");
+  assert(await page.locator("#textbookCatalog").isHidden(), "«Только чат» returns to the simple screen");
 
   await page.click("#reportAnswerBtn");
   assert(await page.locator("#answerReportForm").isVisible(), "a child can report an incorrect answer");

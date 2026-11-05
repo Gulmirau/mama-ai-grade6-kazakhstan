@@ -106,12 +106,8 @@ async function main() {
     result = await hasHorizontalOverflow(page);
     if (result.overflow) failures.push(`${viewport.width}: subject step overflow ${JSON.stringify(result)}`);
 
+    // После выбора предмета сразу открывается простой экран ребёнка (чат).
     await page.click("#guestSubjectChoices button");
-    await page.waitForSelector("#actionQuestionBtn");
-    result = await hasHorizontalOverflow(page);
-    if (result.overflow) failures.push(`${viewport.width}: action step overflow ${JSON.stringify(result)}`);
-
-    await page.click("#actionQuestionBtn");
     await page.waitForSelector("#assistant");
     result = await hasHorizontalOverflow(page);
     if (result.overflow) failures.push(`${viewport.width}: workspace overflow ${JSON.stringify(result)}`);

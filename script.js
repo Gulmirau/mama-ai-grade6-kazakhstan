@@ -873,6 +873,10 @@ let level = Math.max(1, Math.floor(points / 100) + 1);
 let apiToken = localStorage.getItem("mamaAiApiToken") || "";
 let serverOnline = false;
 let aiConfigured = false;
+// Метка, после которой идёт спрятанное решение. Чат показывает кнопку «Показать решение».
+const SOLUTION_MARK = "\n\n🔒\n";
+// Последний разобранный пример: ответ, подсказка и решение — чтобы проверить ответ ребёнка.
+let pendingTutorCheck = null;
 let serverStudent = null;
 let cloudProfile = null;
 let cloudAuthReady = Boolean(window.MamaAiSupabase?.isConfigured?.());
@@ -1013,6 +1017,13 @@ const actionQuestionBtn = document.getElementById("actionQuestionBtn");
 const actionTopicBtn = document.getElementById("actionTopicBtn");
 const actionAssessmentBtn = document.getElementById("actionAssessmentBtn");
 const guestBackBtn = document.getElementById("guestBackBtn");
+const kidBar = document.getElementById("kidBar");
+const kidBarTitle = document.getElementById("kidBarTitle");
+const kidChangeBtn = document.getElementById("kidChangeBtn");
+const kidFocusBtn = document.getElementById("kidFocusBtn");
+const kidPhotoBtn = document.getElementById("kidPhotoBtn");
+const kidMoreBtn = document.getElementById("kidMoreBtn");
+let kidShowAll = false;
 const childHomePanel = document.getElementById("childHomePanel");
 const childHomeTitle = document.getElementById("childHomeTitle");
 const childHomeMeta = document.getElementById("childHomeMeta");
@@ -1094,6 +1105,78 @@ function setAccessMode(mode) {
   if (mode !== "child") document.body.classList.remove("child-ready");
   if (landingPanel) landingPanel.hidden = mode !== "landing";
   updateGuestPanel();
+  updateKidFocus();
+}
+
+// Простой режим для ребёнка: после выбора класса и предмета видны только чат и кнопка фото.
+// Всё остальное (учебники, тесты, план) открывается по кнопке «Ещё».
+function isKidLearning() {
+  const body = document.body.classList;
+  return (body.contains("guest-mode") && body.contains("guest-ready"))
+    || (body.contains("child-mode") && body.contains("child-ready"));
+}
+
+function updateKidFocus() {
+  const learning = isKidLearning();
+  if (!learning) kidShowAll = false;
+  document.body.classList.toggle("kid-focus", learning && !kidShowAll);
+  document.body.classList.toggle("kid-show-all", learning && kidShowAll);
+  if (kidBar) kidBar.hidden = !learning;
+  if (kidFocusBtn) kidFocusBtn.hidden = !kidShowAll;
+  // Кнопку фото показываем только когда подключено распознавание (ИИ на сервере).
+  // Иначе ребёнок нажимает и получает «не умею» — это хуже, чем отсутствие кнопки.
+  if (kidPhotoBtn) kidPhotoBtn.hidden = !aiConfigured;
+  const words = currentLang === "kk"
+    ? { label: "Қазір оқимыз", grade: "сынып", change: "Ауыстыру", photo: "📷 Тапсырманы суретке түсіру", more: "Тағы: оқулықтар, тесттер, жоспар", chatOnly: "← Тек чат" }
+    : currentLang === "en"
+      ? { label: "Now learning", grade: "grade", change: "Change", photo: "📷 Take a photo of the task", more: "More: textbooks, tests, plan", chatOnly: "← Chat only" }
+      : { label: "Сейчас учим", grade: "класс", change: "Сменить", photo: "📷 Сфотографировать задание", more: "Ещё: учебники, тесты, план", chatOnly: "← Только чат" };
+  const label = kidBar?.querySelector(".kid-bar-label");
+  if (label) label.textContent = words.label;
+  if (kidChangeBtn) kidChangeBtn.textContent = words.change;
+  if (kidPhotoBtn) kidPhotoBtn.textContent = words.photo;
+  if (kidMoreBtn) kidMoreBtn.textContent = words.more;
+  if (kidFocusBtn) kidFocusBtn.textContent = words.chatOnly;
+  if (kidBarTitle && learning) kidBarTitle.textContent = `${currentGrade} ${words.grade} · ${subjectLabel(currentSubject().title)}`;
+}
+
+function showKidGreeting() {
+  if (!chat) return;
+  const subject = subjectLabel(currentSubject().title);
+  const name = studentName?.value?.trim();
+  const hello = currentLang === "kk"
+    ? `Сәлем${name ? `, ${name}` : ""}! Пән: ${subject}. Тапсырманы немесе сұрағыңды төменге жаз — бірге талдаймыз.`
+    : currentLang === "en"
+      ? `Hi${name ? `, ${name}` : ""}! Subject: ${subject}. Type your task or question below and we will work it out together.`
+      : `Привет${name ? `, ${name}` : ""}! Предмет: ${subject}. Напиши задание или вопрос внизу — разберём вместе.`;
+  chat.innerHTML = "";
+  addMessage("bot success", hello);
+}
+
+function setKidShowAll(value) {
+  kidShowAll = Boolean(value);
+  updateKidFocus();
+  if (kidShowAll) {
+    document.getElementById("textbookCatalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  } else {
+    document.getElementById("assistant")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+function changeKidSubject() {
+  kidShowAll = false;
+  if (appAccessMode === "child") {
+    document.body.classList.remove("child-ready");
+    updateKidFocus();
+    renderChildHome();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+  guestWizardStep = 1;
+  document.body.classList.remove("guest-ready");
+  updateKidFocus();
+  renderGuestWizard();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function updateGuestPanel() {
@@ -1157,7 +1240,7 @@ function renderGuestWizard() {
   if (!guestWizard) return;
   guestWizard.hidden = appAccessMode !== "guest" || document.body.classList.contains("guest-ready");
   if (guestWizard.hidden) return;
-  if (guestStepPill) guestStepPill.textContent = `Шаг ${guestWizardStep} из 3`;
+  if (guestStepPill) guestStepPill.textContent = `Шаг ${guestWizardStep} из 2`;
   if (guestGradeChoices) guestGradeChoices.hidden = guestWizardStep !== 1;
   if (guestSubjectChoices) guestSubjectChoices.hidden = guestWizardStep !== 2;
   if (guestActionChoices) guestActionChoices.hidden = guestWizardStep !== 3;
@@ -1194,12 +1277,13 @@ function finishGuestWizard(action) {
   } else {
     modeSelect.value = "school";
   }
+  kidShowAll = false;
   renderAll();
-  const isPhoto = action === "photo";
-  const panel = isPhoto ? document.querySelector(".photo-tool") : document.getElementById("assistant");
-  panel?.scrollIntoView({ behavior: "smooth", block: "center" });
-  if (isPhoto) {
-    document.getElementById("photoStatus").textContent = "Нажми на область загрузки и добавь фото задания. Я помогу разобрать условие по шагам.";
+  updateKidFocus();
+  showKidGreeting();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  if (action === "photo") {
+    document.getElementById("photoInput")?.click();
     return;
   }
   if (action === "topic") {
@@ -1218,20 +1302,25 @@ function finishGuestWizard(action) {
 function openChildLearning(action = "question") {
   document.body.classList.add("child-ready");
   if (childHomePanel) childHomePanel.hidden = true;
+  kidShowAll = action === "subject";
+  updateKidFocus();
   if (action === "subject") {
     document.getElementById("learn")?.scrollIntoView({ behavior: "smooth", block: "start" });
     return;
   }
+  window.scrollTo({ top: 0, behavior: "smooth" });
   if (action === "photo") {
-    document.querySelector(".photo-tool")?.scrollIntoView({ behavior: "smooth", block: "center" });
-    document.getElementById("photoStatus").textContent = "Добавь фото домашнего задания, и я помогу разобрать его по шагам.";
+    document.getElementById("photoInput")?.click();
     return;
   }
-  document.getElementById("assistant")?.scrollIntoView({ behavior: "smooth", block: "center" });
   window.setTimeout(() => userInput?.focus(), 350);
 }
 
 function openHelpDrawer() {
+  const steps = document.getElementById("helpHowSteps");
+  if (steps) {
+    steps.innerHTML = guideSlidesData.map((slide) => `<li class="demo-card how-step"><span class="how-pic" aria-hidden="true">${slide.pic}</span><strong>${slide.title}</strong><span>${slide.body}</span></li>`).join("");
+  }
   if (helpDrawer) helpDrawer.hidden = false;
 }
 
@@ -1272,18 +1361,15 @@ function openParentHome() {
 }
 
 const guideSlidesData = [
-  { title: "1. Начало без регистрации", body: "Ребёнок нажимает «Учиться без регистрации» и сразу попадает в учебный режим." },
-  { title: "2. Выбор класса", body: "Mama Ai подстраивает объяснение под 1–11 класс: младшим проще, старшим глубже." },
-  { title: "3. Предмет и тема", body: "Можно выбрать школьный предмет, мини-тест, СОР, СОЧ или подготовку к ЕНТ там, где это подходит классу." },
-  { title: "4. Объяснение по шагам", body: "AI не даёт только ответ, а спрашивает, подсказывает и ведёт ребёнка через ход решения." },
-  { title: "5. Баллы и похвала", body: "За попытку, старание и правильный ответ ребёнок получает баллы и спокойную награду." },
-  { title: "6. Родительский кабинет", body: "Кабинет нужен только если взрослый хочет сохранять прогресс и видеть занятия ребёнка." }
+  { pic: "🎒", title: "1. Выбери класс и предмет", body: "Нажми «Я ученик — начать учиться». Выбери свой класс, а потом предмет." },
+  { pic: "✍️", title: "2. Напиши задание", body: "Напиши пример или вопрос внизу экрана и нажми «Отправить». Например: 3/4 + 1/8." },
+  { pic: "💡", title: "3. Решай с подсказкой", body: "Mama AI даст подсказку. Напиши свой ответ — она проверит. Не получается? Нажми «Показать решение»." }
 ];
 
 function renderGuideSlide() {
   if (!guideSlides) return;
   const slide = guideSlidesData[guideSlideIndex] || guideSlidesData[0];
-  guideSlides.innerHTML = `<article class="guide-slide"><span>${guideSlideIndex + 1}/${guideSlidesData.length}</span><h3>${slide.title}</h3><p>${slide.body}</p></article>`;
+  guideSlides.innerHTML = `<article class="guide-slide"><span>${guideSlideIndex + 1}/${guideSlidesData.length}</span><div class="guide-pic" aria-hidden="true">${slide.pic || ""}</div><h3>${slide.title}</h3><p>${slide.body}</p></article>`;
   if (guidePrevBtn) guidePrevBtn.disabled = guideSlideIndex === 0;
   if (guideNextBtn) guideNextBtn.disabled = guideSlideIndex === guideSlidesData.length - 1;
 }
@@ -1319,15 +1405,6 @@ const guidedTourSteps = [
     before: () => {
       startGuestMode(true);
       guestWizardStep = 2;
-      renderGuestWizard();
-    }
-  },
-  {
-    selector: "#actionQuestionBtn",
-    text: "Теперь выбираем, чем помочь: написать вопрос или добавить фото задания.",
-    before: () => {
-      startGuestMode(true);
-      guestWizardStep = 3;
       renderGuestWizard();
     }
   },
@@ -1821,6 +1898,7 @@ async function syncServerState() {
     const state = await apiFetch("/api/state");
     serverOnline = true;
     aiConfigured = Boolean(state.aiConfigured);
+    updateKidFocus();
     serverStudent = state.student || serverStudent;
     if (serverStudent) {
       points = Number(serverStudent.points || points);
@@ -2253,10 +2331,9 @@ function bindEvents() {
       if (!button) return;
       currentSubjectKey = button.dataset.subject;
       syncCatalogToLearningContext();
-      guestWizardStep = 3;
       saveGuestState();
-      renderAll();
-      renderGuestWizard();
+      // Сразу открываем простой экран: чат + фото. Отдельный шаг «С чем помочь?» убран.
+      finishGuestWizard("question");
     });
   }
   if (catalogGrade) {
@@ -2363,6 +2440,10 @@ function bindEvents() {
   }
   if (actionPhotoBtn) actionPhotoBtn.addEventListener("click", () => finishGuestWizard("photo"));
   if (actionQuestionBtn) actionQuestionBtn.addEventListener("click", () => finishGuestWizard("question"));
+  if (kidChangeBtn) kidChangeBtn.addEventListener("click", changeKidSubject);
+  if (kidFocusBtn) kidFocusBtn.addEventListener("click", () => setKidShowAll(false));
+  if (kidMoreBtn) kidMoreBtn.addEventListener("click", () => setKidShowAll(true));
+  if (kidPhotoBtn) kidPhotoBtn.addEventListener("click", () => document.getElementById("photoInput")?.click());
   if (actionTopicBtn) actionTopicBtn.addEventListener("click", () => finishGuestWizard("topic"));
   if (actionAssessmentBtn) actionAssessmentBtn.addEventListener("click", () => finishGuestWizard("assessment"));
   if (childContinueBtn) childContinueBtn.addEventListener("click", () => openChildLearning("question"));
@@ -2624,6 +2705,7 @@ function renderAll() {
   chatTitle.textContent = subjectLabel(currentSubject().title);
   renderGuestWizard();
   renderChildHome();
+  updateKidFocus();
 }
 
 function renderAssistantCapabilityStatus() {
@@ -3521,6 +3603,21 @@ async function sendMessage() {
 
   addMessage("user", text);
   userInput.value = "";
+
+  const answerCheck = checkChildAnswer(text);
+  if (answerCheck) {
+    addMessage(answerCheck.correct ? "bot success" : "bot", answerCheck.text);
+    if (answerCheck.correct) awardPoints(5, "верный ответ");
+    saveGuestState();
+    return;
+  }
+
+  if (!aiConfigured && pendingTutorCheck?.solution && /не понял|не понимаю|түсінбедім|understand/i.test(text)) {
+    const intro = currentLang === "kk" ? "Ештеңе етпейді! Қадаммен қарайық:" : currentLang === "en" ? "No problem! Let's go step by step:" : "Ничего страшного! Давай по шагам:";
+    addMessage("bot", `${intro}\n\n${pendingTutorCheck.solution}`);
+    return;
+  }
+
   analytics.questions += 1;
   awardPoints(2, "попытку");
   recordEvent("Вопрос", `${currentGrade} класс, ${currentSubject().title}: ${text.slice(0, 50)}`);
@@ -3690,59 +3787,109 @@ function makeVerifiedArithmeticResponse(text, subject, language = "ru") {
         : normalizedOperation === "÷" ? `${answer} × ${b} = ${a}` : expression;
   const similarLeft = formatNumber(left + 2);
   const similarRight = formatNumber(right + 1);
+  const similar = `${similarLeft} ${normalizedOperation} ${similarRight}`;
 
   if (language === "kk") {
-    return [
-      `Қысқаша түсіндіру: есепте екі сан бар: ${a} және ${b}. «${normalizedOperation}» амалы олардың қалай өзгеретінін көрсетеді.`,
-      "Сұрақ: қай амал керек екенін өзің қалай анықтадың?",
-      `Кеңес: есептің негізгі сөзін тап та, ${a} санынан баста.`,
-      `Қадамдық шешу:\n1. Берілген сандарды жазамыз: ${a} және ${b}. Түсінікті ме?\n2. Амалды таңдаймыз: ${normalizedOperation}. Неліктен осы амал?\n3. Есептейміз: ${expression}.`,
-      `Жауап: ${answer}.`,
-      `Тексеру: кері амалмен тексереміз: ${inverse}.`,
-      `Ұқсас тапсырма: ${similarLeft} ${normalizedOperation} ${similarRight} мәнін тап.`,
-      "Жарайсың! Сен есептің амалын таңдап, нәтижені тексердің."
-    ].join("\n\n");
+    return makeVerifiedMathTutorResponse(language, {
+      condition: `Есепте екі сан бар: ${a} және ${b}. Қай амал керек екенін анықтайық.`,
+      hint: `негізгі сөзді тап та, ${a} санынан баста.`,
+      steps: [`Берілген сандар: ${a} және ${b}.`, `Амал: ${normalizedOperation}.`, `Есептейміз: ${expression}.`],
+      answer,
+      check: `кері амал: ${inverse}.`,
+      similar: `${similar} мәнін тап.`
+    });
   }
   if (language === "en") {
-    return [
-      `Short explanation: the task uses the numbers ${a} and ${b}. The “${normalizedOperation}” sign tells us how they change.`,
-      "Question: how did you decide which operation to use?",
-      `Hint: find the key word and begin with ${a}.`,
-      `Step-by-step solution:\n1. Write the known numbers: ${a} and ${b}. Is that clear?\n2. Choose the operation: ${normalizedOperation}. Why does it fit?\n3. Calculate: ${expression}.`,
-      `Answer: ${answer}.`,
-      `Check: use the inverse operation: ${inverse}.`,
-      `Similar task: find ${similarLeft} ${normalizedOperation} ${similarRight}.`,
-      "Well done! You chose an operation and checked the result."
-    ].join("\n\n");
+    return makeVerifiedMathTutorResponse(language, {
+      condition: `The task has two numbers: ${a} and ${b}. Let's decide which operation we need.`,
+      hint: `find the key word and begin with ${a}.`,
+      steps: [`The numbers are ${a} and ${b}.`, `The operation is ${normalizedOperation}.`, `Calculate: ${expression}.`],
+      answer,
+      check: `inverse operation: ${inverse}.`,
+      similar: `find ${similar}.`
+    });
   }
-  return [
-    `Короткое объяснение условия: в задаче есть числа ${a} и ${b}. Знак или смысл слов показывает действие «${normalizedOperation}».`,
-    "Вопрос к тебе: как ты понял(а), какое действие здесь нужно?",
-    `Подсказка: найди ключевое слово в условии и начни с числа ${a}.`,
-    `Пошаговое решение:\n1. Выписываем известные числа: ${a} и ${b}. Понятно, почему берём именно их?\n2. Выбираем действие: ${normalizedOperation}. Как думаешь, почему оно подходит?\n3. Считаем: ${expression}.`,
-    `Ответ: ${answer}.`,
-    `Проверка: выполняем обратное действие: ${inverse}. Равенство верное.`,
-    `Похожее задание: вычисли ${similarLeft} ${normalizedOperation} ${similarRight}.`,
-    "Молодец! Ты выбрал(а) действие, решил(а) задачу и проверил(а) результат."
-  ].join("\n\n");
+  return makeVerifiedMathTutorResponse(language, {
+    condition: `В задаче два числа: ${a} и ${b}. Давай поймём, какое действие нужно.`,
+    hint: `найди главное слово в условии и начни с числа ${a}.`,
+    steps: [`Выписываем числа: ${a} и ${b}.`, `Выбираем действие: ${normalizedOperation}.`, `Считаем: ${expression}.`],
+    answer,
+    check: `обратное действие: ${inverse}. Равенство верное.`,
+    similar: `вычисли ${similar}.`
+  });
 }
 
 function makeVerifiedMathTutorResponse(language, details) {
   const labels = language === "kk"
-    ? { condition: "Шартты қысқаша түсіндіру", question: "Сұрақ", hint: "Кеңес", steps: "Қадамдық шешу", answer: "Жауап", check: "Тексеру", similar: "Ұқсас тапсырма", questionText: "Алғашқы қадамды өзің қалай түсіндірер едің?", praise: "Жарайсың! Сен шешу жолын түсініп, жауабыңды тексердің." }
+    ? { hint: "Кеңес", tryIt: "Өзің шешіп көр: жауабыңды чатқа жаз — мен тексеремін. Қиын болса, «Шешімін көрсету» батырмасын бас.", steps: "Шешуі", answer: "Жауап", check: "Тексеру", similar: "Ұқсас тапсырма" }
     : language === "en"
-      ? { condition: "Short explanation", question: "Question", hint: "Hint", steps: "Step-by-step solution", answer: "Answer", check: "Check", similar: "Similar task", questionText: "How would you explain the first step in your own words?", praise: "Well done! You followed the reasoning and checked the answer." }
-      : { condition: "Короткое объяснение условия", question: "Вопрос к тебе", hint: "Подсказка", steps: "Пошаговое решение", answer: "Ответ", check: "Проверка", similar: "Похожее задание", questionText: "Как бы ты объяснил(а) первый шаг своими словами?", praise: "Молодец! Ты разобрался(ась) в ходе решения и проверил(а) ответ." };
-  return [
-    `${labels.condition}: ${details.condition}`,
-    `${labels.question}: ${labels.questionText}`,
-    `${labels.hint}: ${details.hint}`,
+      ? { hint: "Hint", tryIt: "Try it yourself: type your answer in the chat and I will check it. If it is hard, tap “Show solution”.", steps: "Solution", answer: "Answer", check: "Check", similar: "Similar task" }
+      : { hint: "Подсказка", tryIt: "Попробуй сам(а): напиши ответ в чат — я проверю. Если трудно, нажми «Показать решение».", steps: "Решение", answer: "Ответ", check: "Проверка", similar: "Похожее задание" };
+  pendingTutorCheck = { answer: details.answer, hint: details.hint, language, solution: null };
+  const visible = [
+    details.condition,
+    `💡 ${labels.hint}: ${details.hint}`,
+    labels.tryIt
+  ].join("\n\n");
+  const hidden = [
     `${labels.steps}:\n${details.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`,
     `${labels.answer}: ${details.answer}`,
     `${labels.check}: ${details.check}`,
-    `${labels.similar}: ${details.similar}`,
-    labels.praise
+    `${labels.similar}: ${details.similar}`
   ].join("\n\n");
+  pendingTutorCheck.solution = hidden;
+  return `${visible}${SOLUTION_MARK}${hidden}`;
+}
+
+function normalizeChildAnswer(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/^(ответ|жауап|answer)\s*[:\-]?\s*/, "")
+    .replace(/[хx]\s*=\s*/g, "")
+    .replace(/,/g, ".")
+    .replace(/\s+/g, "")
+    .replace(/[.!]+$/, "");
+}
+
+function answerToNumber(value) {
+  const text = normalizeChildAnswer(value);
+  const fraction = text.match(/^(-?\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)$/);
+  if (fraction && Number(fraction[2]) !== 0) return Number(fraction[1]) / Number(fraction[2]);
+  return /^-?\d+(?:\.\d+)?$/.test(text) ? Number(text) : NaN;
+}
+
+function looksLikeChildAnswer(text) {
+  // Ответ — это одно число или дробь (можно «x = 4»). «12 - 5» — это уже новый пример, не ответ.
+  const clean = normalizeChildAnswer(text);
+  return /^-?\d+(?:\.\d+)?(?:\/\d+)?$/.test(clean);
+}
+
+// Проверяем ответ ребёнка на последний разобранный пример (работает без интернета и без ИИ).
+function checkChildAnswer(text) {
+  if (!pendingTutorCheck || !looksLikeChildAnswer(text)) return null;
+  const expected = pendingTutorCheck.answer;
+  const lang = pendingTutorCheck.language || currentLang;
+  const expectedNumber = answerToNumber(expected);
+  const givenNumber = answerToNumber(text);
+  if (!Number.isFinite(expectedNumber)) return null;
+  const correct = Number.isFinite(givenNumber)
+    ? Math.abs(expectedNumber - givenNumber) < 1e-9
+    : normalizeChildAnswer(expected) === normalizeChildAnswer(text);
+  if (correct) {
+    pendingTutorCheck = null;
+    return {
+      correct: true,
+      text: lang === "kk" ? `Дұрыс! 🎉 Жауабы: ${expected}. Жарайсың!`
+        : lang === "en" ? `Correct! 🎉 The answer is ${expected}. Well done!`
+          : `Верно! 🎉 Ответ: ${expected}. Молодец!`
+    };
+  }
+  return {
+    correct: false,
+    text: lang === "kk" ? `Әзірге дұрыс емес. 💡 ${pendingTutorCheck.hint} Тағы байқап көр немесе шешімін аш.`
+      : lang === "en" ? `Not yet. 💡 ${pendingTutorCheck.hint} Try again or open the solution.`
+        : `Пока не так. 💡 ${pendingTutorCheck.hint} Попробуй ещё раз или открой решение.`
+  };
 }
 
 function makeVerifiedFractionResponse(normalized, language) {
@@ -3823,10 +3970,10 @@ function makeVerifiedLinearEquationResponse(normalized, language) {
 async function handlePhotoUpload(file) {
   if (!aiConfigured) {
     const message = currentLang === "kk"
-      ? "Фото таңдалды, бірақ бұл жария нұсқада мәтінді тану әлі қосылмаған. Тапсырманың мәтінін чатқа жаз немесе көшір. Mama AI суретті оқыдым деп көрсетпейді."
+      ? "Мен әзірге суретті оқи алмаймын: мәтінді тану әлі қосылмаған. Тапсырманы сөзбен немесе цифрмен жаз — бірге талдаймыз."
       : currentLang === "en"
-        ? "The photo was selected, but text recognition is not connected in this public version yet. Type or paste the task into the chat. Mama AI will not pretend it has read the image."
-        : "Фото выбрано, но в публичной версии распознавание текста пока не подключено. Напиши или вставь условие в чат. Mama AI не будет делать вид, что прочитала изображение.";
+        ? "I can't read photos yet: text recognition is not connected. Type the task in words or numbers and we will work it out together."
+        : "Я пока не умею читать фото: распознавание текста пока не подключено. Напиши задание словами или цифрами — разберём вместе.";
     addMessage("bot", message);
     document.getElementById("photoStatus").textContent = message;
     userInput.focus();
@@ -3891,75 +4038,29 @@ function makePhotoImportStatus(result) {
   return `Фото добавлено в базу знаний со статусом: ${result.status || "awaiting_review"}.`;
 }
 
-function makeTutorResponse({ subject, topic, difficulty, originalQuestion, ageTone, language = "ru", mode }) {
-  const selectedBook = activeTextbookContext();
-  const textbookLine = selectedBook
-    ? language === "kk"
-      ? `Таңдалған оқулық: «${selectedBook.title}», ${selectedBook.publisher || "баспасы нақтыланады"}, ${selectedBook.year || "жылы нақтыланады"}.`
-      : language === "en"
-        ? `Selected textbook: “${selectedBook.title}”, ${selectedBook.publisher || "publisher pending"}, ${selectedBook.year || "year pending"}.`
-        : `Выбранный учебник: «${selectedBook.title}», ${selectedBook.publisher || "издательство уточняется"}, ${selectedBook.year || "год уточняется"}.`
-    : language === "kk"
-      ? "Нақты оқулық таңдалмаған. Бірнеше нұсқа болса, оқулықты өзім болжамаймын."
-      : language === "en"
-        ? "No specific textbook is selected. I will not guess when several editions are available."
-        : "Конкретный учебник не выбран. Если разрешено несколько вариантов, я не буду угадывать учебник.";
+function makeTutorResponse({ subject, language = "ru" }) {
+  // Без подключённого ИИ честно говорим, что умеем, и даём короткий план действий.
+  pendingTutorCheck = null;
+  const isMath = ["math", "algebra", "geometry", "calculus"].includes(subject?.key);
   if (language === "kk") {
     return [
-      `Диагностика: ${currentGrade}-сынып, пән: ${subject.title}, тақырып: ${topic}, деңгей: ${difficulty}.`,
-      textbookLine,
-      "Шартты қысқаша түсіндіру: тапсырманы бірден көшірмейміз, алдымен не сұралып тұрғанын анықтаймыз.",
-      "Сұрақ: сен нені түсіндің, ал қай жерде қиындық болды?",
-      "Кеңес: белгілі ақпаратты және табу керек нәрсені бөлек жаз.",
-      "Қадамдар: 1) негізгі сөздерді тап. Түсінікті ме? 2) ережені таңда. Қалай ойлайсың, келесі не істейміз? 3) мысалмен тексер.",
-      "Жауап: соңғы жауапты тек қадамдар түсінікті болғаннан кейін жазамыз.",
-      "Тексеру: жауап шартқа сәйкес келе ме?",
-      "Ұқсас тапсырма: осы тақырып бойынша бір жеңіл мысал құрастыр.",
-      "Жарайсың! Талпынғаның үшін +2 балл, түсіндіруге қатысқаның үшін тағы балл аласың."
-    ].join("\n\n");
+      "Жақсы сұрақ! Әзірге мен өзім тек математикадан мысалдарды нақты шеше аламын: сандармен амалдар, бөлшектер, пайыздар, қарапайым теңдеулер.",
+      "Қазір не істеуге болады:\n1. Тапсырманы қайта оқып, негізгі сөздердің астын сыз.\n2. Оқулықтан осы тақырыпты тауып, мысалды қара.\n3. Шықпаса — мұғалімнен немесе ересектен сұра.",
+      isMath ? "Егер бұл математикадан мысал болса, оны цифрмен жаз, мысалы: 3/4 + 1/8." : ""
+    ].filter(Boolean).join("\n\n");
   }
-
   if (language === "en") {
     return [
-      `Diagnosis: grade ${currentGrade}, subject: ${subject.title}, topic: ${topic}, level: ${difficulty}.`,
-      textbookLine,
-      "Short explanation: we will not jump to the final answer. First we understand what the task asks.",
-      "Question: what part is already clear, and where did it become difficult?",
-      "Hint: write what is known and what we need to find.",
-      "Steps: 1) Find the key words. Does this make sense? 2) Choose the rule. What should we do next? 3) Check with a small example.",
-      "Answer: we write the final answer only after the reasoning is clear.",
-      "Check: does the answer match the question?",
-      "Similar task: make one easier example on the same topic.",
-      "Well done. You get points for trying, thinking, and checking your work."
-    ].join("\n\n");
+      "Good question! For now I can only solve maths examples exactly: operations with numbers, fractions, percentages and simple equations.",
+      "What you can do now:\n1. Read the task again and underline the key words.\n2. Find this topic in your textbook and look at the example.\n3. If it still does not work, ask your teacher or an adult.",
+      isMath ? "If this is a maths example, type it with digits, for example: 3/4 + 1/8." : ""
+    ].filter(Boolean).join("\n\n");
   }
-
-  const modeLine = {
-    school: "обычная школьная задача",
-    sor: "подготовка к СОР",
-    soch: "подготовка к СОЧ",
-    unt: "подготовка к ЕНТ"
-  }[mode] || "учебное задание";
-
   return [
-    `Диагностика: ${currentGrade} класс, предмет: ${subject.title}, тема: ${topic}, формат: ${modeLine}, сложность: ${difficulty}.`,
-    textbookLine,
-    `Короткое объяснение условия: я вижу задание "${originalQuestion}". Сейчас не будем сразу писать готовый ответ. Сначала поймем, что дано, что нужно найти или объяснить, и какое правило здесь подходит. ${ageTone}`,
-    "Вопрос к тебе: что в условии уже понятно? Где остановился: в словах задания, в выборе правила или в вычислениях?",
-    `Подсказка: выпиши отдельно "дано" и "нужно найти". Потом найди ключевую тему: ${topic}. Если ошибешься, ничего страшного: ошибка просто показывает место, которое надо спокойно разобрать.`,
-    [
-      "Пошаговое решение:",
-      "1. Читаем условие и подчеркиваем важные слова. Понятно, почему сначала читаем, а не считаем?",
-      `2. Определяем правило по теме "${topic}". Как думаешь, какое действие или правило здесь может понадобиться?`,
-      "3. Делаем первый маленький шаг: записываем известные данные или главную мысль своими словами. Понятно, почему так?",
-      "4. Решаем дальше не прыжком, а по одному действию. После каждого действия проверяем: стало ли ближе к вопросу задачи?",
-      "5. Если появился промежуточный результат, объясняем его словами. Как думаешь, что делаем дальше?"
-    ].join("\n"),
-    "Ответ: итоговый ответ нужно записать только после этих шагов. В демо-версии я показываю ход решения; когда подключим AI API, iMama сможет подставлять конкретные числа из задания и доводить решение до точного ответа.",
-    "Проверка: подставь полученный результат обратно в условие или перечитай ответ как предложение. Он отвечает именно на вопрос задачи?",
-    `Похожее задание: придумай или реши такой же пример по теме "${topic}", но с более простыми числами или более коротким текстом.`,
-    "Похвала: молодец, что разбираешься, а не просто списываешь. За попытку начислено +2 балла; за объяснение своего шага и правильную проверку можно получить еще больше."
-  ].join("\n\n");
+    "Хороший вопрос! Пока я сам точно решаю только примеры по математике: действия с числами, дроби, проценты и простые уравнения.",
+    "Что можно сделать сейчас:\n1. Прочитай задание ещё раз и подчеркни главные слова.\n2. Найди эту тему в учебнике и посмотри пример.\n3. Если не получается — спроси учителя или взрослого.",
+    isMath ? "Если это пример по математике, напиши его цифрами, например: 3/4 + 1/8." : ""
+  ].filter(Boolean).join("\n\n");
 }
 
 function detectTopic(subject, lowerText) {
@@ -3988,14 +4089,20 @@ function awardPoints(amount, reason) {
 }
 
 function makeHint() {
-  const subject = currentSubject();
-  return `Подсказка по предмету "${subject.title}": выпишите условие, найдите тему (${subject.topics.slice(0, 3).join(", ")}), решите один простой пример и только потом переходите к сложному заданию.`;
+  if (pendingTutorCheck?.hint) return `💡 ${pendingTutorCheck.hint}`;
+  if (currentLang === "kk") return "💡 Не берілгенін және не табу керек екенін бөлек жаз. Содан кейін ең оңай қадамнан баста.";
+  if (currentLang === "en") return "💡 Write down what is given and what you need to find. Then start with the easiest step.";
+  return "💡 Выпиши, что дано и что нужно найти. Потом начни с самого простого шага.";
 }
 
 function chooseLanguage(button) {
   currentLang = button.dataset.lang;
   learningLanguageSelect.value = currentLang;
   localStorage.setItem("mamaAiLearningLang", currentLang);
+  // Язык, выбранный на первом экране, должен сохраниться и для гостевого режима,
+  // иначе помощник продолжает отвечать на старом языке.
+  saveGuestState();
+  updateKidFocus();
   document.querySelectorAll(".lang-btn").forEach((item) => item.classList.remove("active"));
   button.classList.add("active");
   addMessage("bot success", getLanguageMessage());
@@ -4397,12 +4504,42 @@ function makeThemeSvg(type) {
   return svg[type] || svg.stars;
 }
 
+// Делим ответ на видимую часть и спрятанное решение (после строки «🔒»).
+function splitSolution(text) {
+  const value = String(text ?? "");
+  const match = value.match(/\n[ \t]*🔒[ \t]*\n/);
+  if (!match) return [value, null];
+  return [value.slice(0, match.index).trimEnd(), value.slice(match.index + match[0].length).trim()];
+}
+
+function renderMessageContent(div, text) {
+  const [visible, hidden] = splitSolution(text);
+  div.textContent = visible;
+  if (!hidden) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "ghost-btn show-solution-btn";
+  button.textContent = currentLang === "kk" ? "Шешімін көрсету" : currentLang === "en" ? "Show solution" : "Показать решение";
+  button.addEventListener("click", () => {
+    const solution = document.createElement("div");
+    solution.className = "message-solution";
+    solution.textContent = hidden;
+    button.replaceWith(solution);
+    lastAnswerText = hidden;
+  });
+  div.appendChild(button);
+}
+
+function visibleMessageText(text) {
+  return splitSolution(text)[0];
+}
+
 function addMessage(type, text) {
   const div = document.createElement("div");
   div.className = `message ${type}`;
-  div.textContent = text;
+  renderMessageContent(div, text);
   chat.appendChild(div);
-  if (type.includes("bot")) lastAnswerText = text;
+  if (type.includes("bot")) lastAnswerText = visibleMessageText(text);
   chat.scrollTop = chat.scrollHeight;
 }
 
@@ -4419,11 +4556,11 @@ function replaceLastBotMessage(text) {
   const last = messages[messages.length - 1];
   if (last) {
     last.classList.remove("typing");
-    last.textContent = text;
+    renderMessageContent(last, text);
   } else {
     addMessage("bot", text);
   }
-  lastAnswerText = text;
+  lastAnswerText = visibleMessageText(text);
   chat.scrollTop = chat.scrollHeight;
 }
 
