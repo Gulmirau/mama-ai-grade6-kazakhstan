@@ -138,6 +138,24 @@ async function callGemini(model: string, contents: unknown, useSearch: boolean) 
   return { answer, sources };
 }
 
+// Проверяем ключ по-настоящему (запрос списка моделей), результат помним 10 минут.
+// Если ключ неверный, сайт узнает об этом и будет работать без ИИ, а не показывать ошибки.
+let keyCheck: { ok: boolean; at: number } | null = null;
+async function keyWorks(): Promise<boolean> {
+  if (!GEMINI_API_KEY) return false;
+  if (keyCheck && Date.now() - keyCheck.at < 10 * 60_000) return keyCheck.ok;
+  try {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1", {
+      headers: { "x-goog-api-key": GEMINI_API_KEY },
+    });
+    keyCheck = { ok: response.ok, at: Date.now() };
+    if (!response.ok) console.error(`Gemini key check failed: HTTP ${response.status}`);
+  } catch {
+    keyCheck = { ok: false, at: Date.now() };
+  }
+  return keyCheck.ok;
+}
+
 function json(body: unknown, status: number, origin: string | null) {
   return new Response(JSON.stringify(body), {
     status,
@@ -148,7 +166,7 @@ function json(body: unknown, status: number, origin: string | null) {
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(origin) });
-  if (req.method === "GET") return json({ ok: true, ai: Boolean(GEMINI_API_KEY) }, 200, origin);
+  if (req.method === "GET") return json({ ok: true, ai: await keyWorks() }, 200, origin);
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405, origin);
   if (!GEMINI_API_KEY) return json({ error: "ai_not_configured" }, 503, origin);
 
@@ -182,6 +200,7 @@ Deno.serve(async (req) => {
         // Неверный ключ — другие модели тоже не помогут.
         if (status === 400 && /API key/i.test((error as Error).message)) {
           console.error(errors.join(" | "));
+          keyCheck = { ok: false, at: Date.now() };
           return json({ error: "bad_key" }, 502, origin);
         }
       }

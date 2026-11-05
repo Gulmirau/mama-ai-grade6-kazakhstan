@@ -3792,7 +3792,18 @@ async function sendMessage() {
       replaceLastBotMessage(answer);
       rememberChat("model", answer);
     } catch (error) {
-      replaceLastBotMessage(cloudAiErrorText(error.code));
+      // Временные ограничения — честно говорим ребёнку. Поломка ключа/сервиса —
+      // выключаем ИИ и отвечаем как раньше, без ИИ.
+      if (["quota", "too_many_requests", "blocked"].includes(error.code)) {
+        replaceLastBotMessage(cloudAiErrorText(error.code));
+      } else {
+        cloudAiReady = false;
+        updateKidFocus();
+        renderAssistantCapabilityStatus();
+        const fallback = makeAnswer(text);
+        replaceLastBotMessage(fallback);
+        rememberChat("model", fallback);
+      }
     }
     saveGuestState();
     saveChildProgress(2, "question", { question: text, subject: currentSubject().key });
