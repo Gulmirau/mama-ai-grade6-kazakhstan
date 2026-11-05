@@ -1,0 +1,97 @@
+name: Deploy Mama AI tutor (Gemini)
+
+# Выкладывает функцию ИИ-репетитора в Supabase и проверяет её тестовыми вопросами.
+# Нужны секреты репозитория: GEMINI_API_KEY и SUPABASE_ACCESS_TOKEN
+# (Settings → Secrets and variables → Actions).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/functions/**"
+      - ".github/workflows/deploy-ai.yml"
+  workflow_dispatch:
+    inputs:
+      question:
+        description: "Дополнительный тестовый вопрос (необязательно)"
+        required: false
+        default: ""
+      deploy:
+        description: "Выложить функцию заново"
+        type: boolean
+        required: false
+        default: true
+
+concurrency:
+  group: deploy-ai
+  cancel-in-progress: false
+
+env:
+  PROJECT_REF: xkuotzwxvpmtihabszto
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check secrets
+        id: secrets
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          missing=""
+          [ -z "$GEMINI_API_KEY" ] && missing="$missing GEMINI_API_KEY"
+          [ -z "$SUPABASE_ACCESS_TOKEN" ] && missing="$missing SUPABASE_ACCESS_TOKEN"
+          if [ -n "$missing" ]; then
+            echo "::warning::Не хватает секретов:$missing. Добавьте их в Settings → Secrets and variables → Actions."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Supabase CLI
+        if: steps.secrets.outputs.ready == 'true'
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Save Gemini key in Supabase
+        if: steps.secrets.outputs.ready == 'true' && (github.event_name == 'push' || inputs.deploy)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: supabase secrets set --project-ref "$PROJECT_REF" GEMINI_API_KEY="$GEMINI_API_KEY"
+
+      - name: Deploy function "ask"
+        if: steps.secrets.outputs.ready == 'true' && (github.event_name == 'push' || inputs.deploy)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy ask --project-ref "$PROJECT_REF" --no-verify-jwt
+
+      - name: Test questions
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          EXTRA_QUESTION: ${{ inputs.question }}
+        run: |
+          URL="https://$PROJECT_REF.supabase.co/functions/v1/ask"
+          sleep 5
+          echo "== Health"; curl -sS "$URL"; echo
+          ask() {
+            echo; echo "================ $1 | класс $2 | $3 | $4"
+            body=$(jq -n --arg q "$1" --argjson g "$2" --arg s "$3" --arg l "$4" --arg m "${5:-school}" \
+              '{question:$q, grade:$g, subjectTitle:$s, language:$l, mode:$m, history:[]}')
+            curl -sS -X POST "$URL" -H "Content-Type: application/json" -H "Origin: https://gulmirau.github.io" -d "$body" \
+              | jq -r '"[model: \(.model // "-") search: \(.search // "-")]\n\(.answer // .)\n\(if .sources then "SOURCES: " + ([.sources[].title] | join(", ")) else "" end)"'
+            sleep 4
+          }
+          ask "обисни смысл басни лиса и варона" 3 "Литературное чтение" ru
+          ask "Кто такие Керей и Жанибек и что они основали?" 6 "История Казахстана" ru
+          ask "Абай Құнанбаев кім? Қысқаша айтып бер." 5 "Қазақ әдебиеті" kk
+          ask "В классе 24 ученика, 3/8 из них девочки. Сколько мальчиков?" 5 "Математика" ru
+          ask "Почему летом жарко, а зимой холодно?" 4 "Познание мира" ru
+          ask "Тема: правописание приставок пре и при" 6 "Русский язык" ru sor
+          ask "сделай упражнение 245 на странице 87" 5 "Математика" ru
+          if [ -n "$EXTRA_QUESTION" ]; then ask "$EXTRA_QUESTION" 5 "Общий" ru; fi

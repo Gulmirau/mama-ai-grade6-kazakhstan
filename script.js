@@ -873,6 +873,10 @@ let level = Math.max(1, Math.floor(points / 100) + 1);
 let apiToken = localStorage.getItem("mamaAiApiToken") || "";
 let serverOnline = false;
 let aiConfigured = false;
+// ИИ-репетитор в облаке (Supabase Edge Function «ask» → Google Gemini).
+let cloudAiReady = false;
+// Последние сообщения диалога — ИИ видит их и может проверить ответ ребёнка.
+let chatHistory = [];
 // Метка, после которой идёт спрятанное решение. Чат показывает кнопку «Показать решение».
 const SOLUTION_MARK = "\n\n🔒\n";
 // Последний разобранный пример: ответ, подсказка и решение — чтобы проверить ответ ребёнка.
@@ -1024,6 +1028,7 @@ const kidChangeBtn = document.getElementById("kidChangeBtn");
 const kidFocusBtn = document.getElementById("kidFocusBtn");
 const kidPhotoBtn = document.getElementById("kidPhotoBtn");
 const kidMoreBtn = document.getElementById("kidMoreBtn");
+const kidAssessmentBtn = document.getElementById("kidAssessmentBtn");
 let kidShowAll = false;
 const childHomePanel = document.getElementById("childHomePanel");
 const childHomeTitle = document.getElementById("childHomeTitle");
@@ -1126,17 +1131,19 @@ function updateKidFocus() {
   if (kidFocusBtn) kidFocusBtn.hidden = !kidShowAll;
   // Кнопку фото показываем только когда подключено распознавание (ИИ на сервере).
   // Иначе ребёнок нажимает и получает «не умею» — это хуже, чем отсутствие кнопки.
-  if (kidPhotoBtn) kidPhotoBtn.hidden = !aiConfigured;
+  if (kidPhotoBtn) kidPhotoBtn.hidden = !isAiReady();
+  if (kidAssessmentBtn) kidAssessmentBtn.hidden = isNoMarksGrade();
   const words = currentLang === "kk"
-    ? { label: "Қазір оқимыз", grade: "сынып", change: "Ауыстыру", photo: "📷 Тапсырманы суретке түсіру", more: "Тағы: оқулықтар, тесттер, жоспар", chatOnly: "← Тек чат" }
+    ? { label: "Қазір оқимыз", grade: "сынып", change: "Ауыстыру", photo: "📷 Тапсырманы суретке түсіру", prep: "📝 БЖБ/ТЖБ-ға дайындық", more: "Тағы: оқулықтар, тесттер, жоспар", chatOnly: "← Тек чат" }
     : currentLang === "en"
-      ? { label: "Now learning", grade: "grade", change: "Change", photo: "📷 Take a photo of the task", more: "More: textbooks, tests, plan", chatOnly: "← Chat only" }
-      : { label: "Сейчас учим", grade: "класс", change: "Сменить", photo: "📷 Сфотографировать задание", more: "Ещё: учебники, тесты, план", chatOnly: "← Только чат" };
+      ? { label: "Now learning", grade: "grade", change: "Change", photo: "📷 Take a photo of the task", prep: "📝 Prepare for a test (SOR/SOCH)", more: "More: textbooks, tests, plan", chatOnly: "← Chat only" }
+      : { label: "Сейчас учим", grade: "класс", change: "Сменить", photo: "📷 Сфотографировать задание", prep: "📝 Подготовка к СОР/СОЧ", more: "Ещё: учебники, тесты, план", chatOnly: "← Только чат" };
   const label = kidBar?.querySelector(".kid-bar-label");
   if (label) label.textContent = words.label;
   if (kidChangeBtn) kidChangeBtn.textContent = words.change;
   if (kidPhotoBtn) kidPhotoBtn.textContent = words.photo;
   if (kidMoreBtn) kidMoreBtn.textContent = words.more;
+  if (kidAssessmentBtn) kidAssessmentBtn.textContent = words.prep;
   if (kidFocusBtn) kidFocusBtn.textContent = words.chatOnly;
   if (kidBarTitle && learning) kidBarTitle.textContent = `${currentGrade} ${words.grade} · ${subjectLabel(currentSubject().title)}`;
 }
@@ -1151,7 +1158,24 @@ function showKidGreeting() {
       ? `Hi${name ? `, ${name}` : ""}! Subject: ${subject}. Type your task or question below and we will work it out together.`
       : `Привет${name ? `, ${name}` : ""}! Предмет: ${subject}. Напиши задание или вопрос внизу — разберём вместе.`;
   chat.innerHTML = "";
+  chatHistory = [];
+  pendingTutorCheck = null;
   addMessage("bot success", hello);
+}
+
+// Подготовка к СОР/СОЧ: режим «sor», ребёнок называет тему, ИИ объясняет и даёт тренировочные задания.
+function startAssessmentPrep() {
+  if (modeSelect) modeSelect.value = "sor";
+  const subject = subjectLabel(currentSubject().title);
+  const text = currentLang === "kk"
+    ? `Пән: ${subject}. Қай тақырып бойынша БЖБ немесе ТЖБ жазасың? Тақырыпты жаз немесе 🎤 арқылы айт — алдымен басты нәрсені түсіндіремін, содан кейін жаттығу тапсырмаларын беремін.`
+    : currentLang === "en"
+      ? `Subject: ${subject}. Which topic is your test on? Type it or say it with 🎤 — I will explain the key points first and then give you practice tasks.`
+      : `Предмет: ${subject}. По какой теме будет СОР или СОЧ? Напиши тему или скажи через 🎤 — сначала объясню главное, потом дам тренировочные задания.`;
+  addMessage("bot success", text);
+  rememberChat("model", text);
+  userInput.placeholder = currentLang === "kk" ? "Тақырып, мысалы: бөлшектер" : currentLang === "en" ? "Topic, e.g. fractions" : "Тема, например: дроби";
+  userInput.focus();
 }
 
 function setKidShowAll(value) {
@@ -1722,6 +1746,7 @@ async function init() {
   }
   renderAll();
   saveAnalytics();
+  checkCloudAi();
 }
 
 function fillGrades() {
@@ -2445,6 +2470,7 @@ function bindEvents() {
   if (kidFocusBtn) kidFocusBtn.addEventListener("click", () => setKidShowAll(false));
   if (kidMoreBtn) kidMoreBtn.addEventListener("click", () => setKidShowAll(true));
   if (kidPhotoBtn) kidPhotoBtn.addEventListener("click", () => document.getElementById("photoInput")?.click());
+  if (kidAssessmentBtn) kidAssessmentBtn.addEventListener("click", startAssessmentPrep);
   if (actionTopicBtn) actionTopicBtn.addEventListener("click", () => finishGuestWizard("topic"));
   if (actionAssessmentBtn) actionAssessmentBtn.addEventListener("click", () => finishGuestWizard("assessment"));
   if (childContinueBtn) childContinueBtn.addEventListener("click", () => openChildLearning("question"));
@@ -2635,6 +2661,12 @@ function bindEvents() {
   });
 
   document.getElementById("hintBtn").addEventListener("click", () => {
+    // С ИИ подсказка учитывает текущее задание из диалога.
+    if (cloudAiReady && !pendingTutorCheck && chatHistory.length) {
+      userInput.value = currentLang === "kk" ? "Маған тағы бір кеңес берші, бірақ жауабын айтпа." : currentLang === "en" ? "Give me one more hint, but not the answer." : "Дай мне ещё одну подсказку, но не ответ.";
+      sendMessage();
+      return;
+    }
     addMessage("bot success", makeHint());
     recordEvent("Подсказка", currentSubject().title);
   });
@@ -2712,7 +2744,7 @@ function renderAll() {
 
 function renderAssistantCapabilityStatus() {
   if (!assistantCapabilityNote) return;
-  if (aiConfigured) {
+  if (isAiReady()) {
     assistantCapabilityNote.textContent = currentLang === "kk"
       ? "AI қосылған. Жауапты оқулықпен салыстырып, соңғы нәтижені өзің де тексер."
       : currentLang === "en"
@@ -3595,6 +3627,120 @@ function getQuizForContext() {
   return quizBank[currentSubjectKey] || quizBank.default;
 }
 
+function isAiReady() {
+  return aiConfigured || cloudAiReady;
+}
+
+function cloudAiUrl() {
+  const url = String(window.MAMA_AI_CONFIG?.SUPABASE_URL || "").replace(/\/+$/, "");
+  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)) return "";
+  return `${url}/functions/v1/ask`;
+}
+
+function cloudAiHeaders() {
+  const key = window.MAMA_AI_CONFIG?.SUPABASE_ANON_KEY || "";
+  const headers = { "Content-Type": "application/json" };
+  if (key && !/your-public/.test(key)) headers.apikey = key;
+  return headers;
+}
+
+// Проверяем при загрузке, подключён ли ИИ. Если нет — сайт работает как раньше.
+async function checkCloudAi() {
+  const url = cloudAiUrl();
+  if (!url) return;
+  try {
+    const response = await fetch(url, { method: "GET", headers: cloudAiHeaders() });
+    const data = await response.json();
+    cloudAiReady = Boolean(response.ok && data?.ai);
+  } catch {
+    cloudAiReady = false;
+  }
+  updateKidFocus();
+  renderAssistantCapabilityStatus();
+}
+
+function rememberChat(role, text) {
+  const value = String(text || "").trim();
+  if (!value) return;
+  chatHistory.push({ role, text: value.slice(0, 3000) });
+  if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
+}
+
+function cloudAiErrorText(code) {
+  const ru = {
+    quota: "Я сегодня ответила на очень много вопросов и немного устала 😊 Попробуй через пару минут.",
+    too_many_requests: "Слишком много вопросов подряд. Подожди минутку и спроси ещё раз.",
+    blocked: "На такой вопрос я не отвечаю. Давай вернёмся к урокам 📚",
+    default: "Сейчас не получилось связаться с ИИ. Проверь интернет и попробуй ещё раз."
+  };
+  const kk = {
+    quota: "Бүгін көп сұраққа жауап бердім 😊 Бірнеше минуттан кейін қайта көр.",
+    too_many_requests: "Сұрақ тым көп. Бір минут күтіп, қайта сұра.",
+    blocked: "Бұл сұраққа жауап бермеймін. Сабаққа оралайық 📚",
+    default: "Қазір ЖИ-мен байланысу мүмкін болмады. Интернетті тексеріп, қайта көр."
+  };
+  const en = {
+    quota: "I have answered a lot of questions today 😊 Please try again in a few minutes.",
+    too_many_requests: "Too many questions in a row. Wait a minute and ask again.",
+    blocked: "I can't answer that. Let's get back to schoolwork 📚",
+    default: "I could not reach the AI right now. Check the internet and try again."
+  };
+  const dict = currentLang === "kk" ? kk : currentLang === "en" ? en : ru;
+  return dict[code] || dict.default;
+}
+
+async function askCloudAi({ question, image = null, history = chatHistory }) {
+  const subject = currentSubject();
+  const response = await fetch(cloudAiUrl(), {
+    method: "POST",
+    headers: cloudAiHeaders(),
+    body: JSON.stringify({
+      question,
+      image,
+      grade: currentGrade,
+      subjectKey: subject.key,
+      subjectTitle: subject.title,
+      language: currentLang,
+      mode: modeSelect?.value || "school",
+      selectedTextbook: activeTextbookContext(),
+      history: history.slice(-8)
+    })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.answer) {
+    const error = new Error(data.error || `HTTP ${response.status}`);
+    error.code = data.error;
+    throw error;
+  }
+  let answer = String(data.answer).replace(/\*\*/g, "").replace(/^#+\s*/gm, "");
+  const sources = (data.sources || []).map((item) => item.title).filter(Boolean);
+  if (sources.length) answer += `\n\n📚 ${currentLang === "kk" ? "Дереккөздер" : currentLang === "en" ? "Sources" : "Источники"}: ${[...new Set(sources)].join(", ")}`;
+  return answer;
+}
+
+// Уменьшаем фото перед отправкой: так быстрее и не упираемся в лимиты.
+function shrinkImage(file, maxSide = 1600) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        resolve({ mimeType: "image/jpeg", data: dataUrl.split(",")[1] });
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 async function sendMessage() {
   const text = userInput.value.trim();
   if (!text) return;
@@ -3605,16 +3751,18 @@ async function sendMessage() {
 
   addMessage("user", text);
   userInput.value = "";
+  rememberChat("user", text);
 
   const answerCheck = checkChildAnswer(text);
   if (answerCheck) {
     addMessage(answerCheck.correct ? "bot success" : "bot", answerCheck.text);
+    rememberChat("model", answerCheck.text);
     if (answerCheck.correct) awardPoints(5, "верный ответ");
     saveGuestState();
     return;
   }
 
-  if (!aiConfigured && pendingTutorCheck?.solution && /не понял|не понимаю|түсінбедім|understand/i.test(text)) {
+  if (!isAiReady() && pendingTutorCheck?.solution && /не понял|не понимаю|түсінбедім|understand/i.test(text)) {
     const intro = currentLang === "kk" ? "Ештеңе етпейді! Қадаммен қарайық:" : currentLang === "en" ? "No problem! Let's go step by step:" : "Ничего страшного! Давай по шагам:";
     addMessage("bot", `${intro}\n\n${pendingTutorCheck.solution}`);
     return;
@@ -3624,7 +3772,32 @@ async function sendMessage() {
   awardPoints(2, "попытку");
   recordEvent("Вопрос", `${currentGrade} класс, ${currentSubject().title}: ${text.slice(0, 50)}`);
 
-  addTypingMessage("Думаю как репетитор");
+  addTypingMessage(currentLang === "kk" ? "Ойланып жатырмын..." : currentLang === "en" ? "Thinking..." : "Думаю...");
+
+  // Примеры по математике считаем точно в коде — без ИИ, чтобы не было ошибок.
+  const exactMath = makeVerifiedArithmeticResponse(text, currentSubject(), currentLang);
+  if (exactMath) {
+    replaceLastBotMessage(exactMath);
+    rememberChat("model", exactMath);
+    saveGuestState();
+    saveChildProgress(2, "question", { question: text, subject: currentSubject().key });
+    return;
+  }
+
+  if (cloudAiReady) {
+    try {
+      // Текущий вопрос уже записан в историю — передаём историю без него.
+      const answer = await askCloudAi({ question: text, history: chatHistory.slice(0, -1) });
+      pendingTutorCheck = null;
+      replaceLastBotMessage(answer);
+      rememberChat("model", answer);
+    } catch (error) {
+      replaceLastBotMessage(cloudAiErrorText(error.code));
+    }
+    saveGuestState();
+    saveChildProgress(2, "question", { question: text, subject: currentSubject().key });
+    return;
+  }
 
   try {
     const subject = currentSubject();
@@ -3983,6 +4156,22 @@ function makeVerifiedLinearEquationResponse(normalized, language) {
 }
 
 async function handlePhotoUpload(file) {
+  if (cloudAiReady) {
+    addMessage("user", "📷");
+    addTypingMessage(currentLang === "kk" ? "Суретті қарап жатырмын..." : currentLang === "en" ? "Looking at the photo..." : "Смотрю фото...");
+    try {
+      const image = await shrinkImage(file);
+      const question = currentLang === "kk" ? "Суреттегі тапсырманы түсінуге көмектес." : currentLang === "en" ? "Help me understand the task in the photo." : "Помоги разобраться с заданием на фото.";
+      const answer = await askCloudAi({ question, image });
+      pendingTutorCheck = null;
+      replaceLastBotMessage(answer);
+      rememberChat("user", question);
+      rememberChat("model", answer);
+    } catch (error) {
+      replaceLastBotMessage(cloudAiErrorText(error.code));
+    }
+    return;
+  }
   if (!aiConfigured) {
     const message = currentLang === "kk"
       ? "Мен әзірге суретті оқи алмаймын: мәтінді тану әлі қосылмаған. Тапсырманы сөзбен немесе цифрмен жаз — бірге талдаймыз."
