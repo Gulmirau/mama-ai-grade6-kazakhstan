@@ -3668,19 +3668,22 @@ function rememberChat(role, text) {
 
 function cloudAiErrorText(code) {
   const ru = {
-    quota: "Я сегодня ответила на очень много вопросов и немного устала 😊 Попробуй через пару минут.",
+    busy: "Сейчас очень много желающих, и сервер ИИ занят. Подожди минутку и нажми «Отправить» ещё раз — твой вопрос я оставила в поле.",
+    quota: "Лимит бесплатных вопросов к ИИ на сегодня закончился. Попробуй позже или спроси учителя. Твой вопрос я оставила в поле.",
     too_many_requests: "Слишком много вопросов подряд. Подожди минутку и спроси ещё раз.",
     blocked: "На такой вопрос я не отвечаю. Давай вернёмся к урокам 📚",
     default: "Сейчас не получилось связаться с ИИ. Проверь интернет и попробуй ещё раз."
   };
   const kk = {
-    quota: "Бүгін көп сұраққа жауап бердім 😊 Бірнеше минуттан кейін қайта көр.",
+    busy: "Қазір сұраушылар көп, ЖИ сервері бос емес. Бір минут күтіп, «Жіберу» батырмасын қайта бас — сұрағың жолда қалды.",
+    quota: "Бүгінгі тегін сұрақтар лимиті бітті. Кейінірек қайта көр. Сұрағың жолда қалды.",
     too_many_requests: "Сұрақ тым көп. Бір минут күтіп, қайта сұра.",
     blocked: "Бұл сұраққа жауап бермеймін. Сабаққа оралайық 📚",
     default: "Қазір ЖИ-мен байланысу мүмкін болмады. Интернетті тексеріп, қайта көр."
   };
   const en = {
-    quota: "I have answered a lot of questions today 😊 Please try again in a few minutes.",
+    busy: "Lots of people are asking right now and the AI server is busy. Wait a minute and press Send again — your question is still in the box.",
+    quota: "Today's free AI question limit is used up. Please try later. Your question is still in the box.",
     too_many_requests: "Too many questions in a row. Wait a minute and ask again.",
     blocked: "I can't answer that. Let's get back to schoolwork 📚",
     default: "I could not reach the AI right now. Check the internet and try again."
@@ -3709,7 +3712,7 @@ async function askCloudAi({ question, image = null, history = chatHistory }, ret
   const data = await response.json().catch(() => ({}));
   // Временный сбой сервера — один раз тихо повторяем запрос.
   if (retry && response.status >= 500 && data.error !== "bad_key" && data.error !== "ai_not_configured") {
-    await new Promise((resolve) => setTimeout(resolve, 1200));
+    await new Promise((resolve) => setTimeout(resolve, 3000));
     return askCloudAi({ question, image, history }, false);
   }
   if (!response.ok || !data.answer) {
@@ -3800,8 +3803,9 @@ async function sendMessage() {
       // Временные ограничения — честно говорим ребёнку. Поломка ключа/сервиса —
       // выключаем ИИ и отвечаем как раньше, без ИИ.
       if (!["bad_key", "ai_not_configured"].includes(error.code)) {
-        // Временная проблема: ИИ не выключаем, просим повторить.
+        // Временная проблема: ИИ не выключаем, возвращаем вопрос в поле, чтобы нажать ещё раз.
         replaceLastBotMessage(cloudAiErrorText(error.code));
+        if (!userInput.value) userInput.value = text;
       } else {
         cloudAiReady = false;
         updateKidFocus();
