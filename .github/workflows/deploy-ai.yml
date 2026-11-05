@@ -16,6 +16,14 @@ on:
         description: "Дополнительный тестовый вопрос (необязательно)"
         required: false
         default: ""
+      grade:
+        description: "Класс для тестового вопроса"
+        required: false
+        default: "5"
+      subject:
+        description: "Предмет для тестового вопроса"
+        required: false
+        default: "Общий"
       deploy:
         description: "Выложить функцию заново"
         type: boolean
@@ -83,6 +91,8 @@ jobs:
         if: steps.secrets.outputs.ready == 'true'
         env:
           EXTRA_QUESTION: ${{ inputs.question }}
+          EXTRA_GRADE: ${{ inputs.grade || '5' }}
+          EXTRA_SUBJECT: ${{ inputs.subject || 'Общий' }}
         run: |
           URL="https://$PROJECT_REF.supabase.co/functions/v1/ask"
           sleep 5
@@ -96,7 +106,7 @@ jobs:
             sleep 8
           }
           # Каждый вопрос тратит бесплатный лимит, поэтому полный набор — только по ручному запуску без вопроса.
-          if [ -n "$EXTRA_QUESTION" ]; then ask "$EXTRA_QUESTION" 5 "Общий" ru; exit 0; fi
+          if [ -n "$EXTRA_QUESTION" ]; then ask "$EXTRA_QUESTION" "$EXTRA_GRADE" "$EXTRA_SUBJECT" ru; exit 0; fi
           ask "обисни смысл басни лиса и варона" 3 "Литературное чтение" ru
           if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then exit 0; fi
           ask "Кто такие Керей и Жанибек и что они основали?" 6 "История Казахстана" ru

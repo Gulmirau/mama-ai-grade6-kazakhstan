@@ -4020,7 +4020,9 @@ function makeVerifiedArithmeticResponse(text, subject, language = "ru") {
   }
   return makeVerifiedMathTutorResponse(language, {
     condition: `В задаче два числа: ${a} и ${b}. Давай поймём, какое действие нужно.`,
-    hint: `найди главное слово в условии и начни с числа ${a}.`,
+    hint: currentGrade <= 4
+      ? `нужно ${normalizedOperation === "+" ? "сложить" : normalizedOperation === "-" ? "вычесть" : normalizedOperation === "×" ? "умножить" : "разделить"}: ${a} ${normalizedOperation} ${b}. Можно посчитать на пальцах или нарисовать палочки.`
+      : `найди главное слово в условии и начни с числа ${a}.`,
     steps: [`Выписываем числа: ${a} и ${b}.`, `Выбираем действие: ${normalizedOperation}.`, `Считаем: ${expression}.`],
     answer,
     check: `обратное действие: ${inverse}. Равенство верное.`,
@@ -4035,10 +4037,13 @@ function makeVerifiedMathTutorResponse(language, details) {
       ? { hint: "Hint", tryIt: "Try it yourself: type your answer or say it with 🎤 and I will check it. If it is hard, tap “Show solution”.", steps: "Solution", answer: "Answer", check: "Check", similar: "Similar task" }
       : { hint: "Подсказка", tryIt: "Попробуй сам(а): напиши ответ или скажи его через 🎤 — я проверю. Если трудно, нажми «Показать решение».", steps: "Решение", answer: "Ответ", check: "Проверка", similar: "Похожее задание" };
   pendingTutorCheck = { answer: details.answer, hint: details.hint, language, solution: null };
+  // Для 1–4 класса — совсем просто: без сложных слов, одна короткая просьба.
+  const young = currentGrade <= 4;
+  const youngTry = language === "kk" ? "Қанша шықты? Санды жаз немесе 🎤 арқылы айт." : language === "en" ? "How much is it? Type the number or say it with 🎤." : "Сколько получилось? Напиши число или скажи через 🎤.";
   const visible = [
     details.condition,
     `💡 ${labels.hint}: ${details.hint}`,
-    labels.tryIt
+    young ? youngTry : labels.tryIt
   ].join("\n\n");
   const hidden = [
     `${labels.steps}:\n${details.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`,
@@ -4091,6 +4096,17 @@ function checkChildAnswer(text) {
       text: lang === "kk" ? `Дұрыс! 🎉 Жауабы: ${expected}. Жарайсың!`
         : lang === "en" ? `Correct! 🎉 The answer is ${expected}. Well done!`
           : `Верно! 🎉 Ответ: ${expected}. Молодец!`
+    };
+  }
+  // Маленьким после ошибки сразу спокойно показываем решение, без новых вопросов.
+  if (currentGrade <= 4 && pendingTutorCheck.solution) {
+    const solution = pendingTutorCheck.solution;
+    pendingTutorCheck = null;
+    return {
+      correct: false,
+      text: lang === "kk" ? `Жақсы талпыныс! Бірге қарайық:\n\n${solution}`
+        : lang === "en" ? `Good try! Let's look together:\n\n${solution}`
+          : `Хорошая попытка! Давай посмотрим вместе:\n\n${solution}`
     };
   }
   return {
